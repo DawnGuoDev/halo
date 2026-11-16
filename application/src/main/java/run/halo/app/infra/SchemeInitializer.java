@@ -251,6 +251,16 @@ class SchemeInitializer implements SmartLifecycle {
                             .orElse(0L))
                     .nullable(false));
         });
+        schemeManager.register(PostFavorite.class, indexSpecs -> {
+            indexSpecs.add(IndexSpecs.<PostFavorite, String>single(PostFavorite.USERNAME_INDEX, String.class)
+                    .indexFunc(favorite -> Optional.ofNullable(favorite.getSpec())
+                            .map(PostFavorite.PostFavoriteSpec::getUsername)
+                            .orElse(null)));
+            indexSpecs.add(IndexSpecs.<PostFavorite, String>single(PostFavorite.POST_NAME_INDEX, String.class)
+                    .indexFunc(favorite -> Optional.ofNullable(favorite.getSpec())
+                            .map(PostFavorite.PostFavoriteSpec::getPostName)
+                            .orElse(null)));
+        });
         schemeManager.register(Category.class, indexSpecs -> {
             indexSpecs.add(IndexSpecs.<Category, String>single("spec.slug", String.class)
                     .indexFunc(category -> Optional.ofNullable(category.getSpec())

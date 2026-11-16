@@ -10,6 +10,7 @@ import { computed, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { postLabels } from "@/constants/labels";
 import PostTag from "../../tags/components/PostTag.vue";
+import FavoriteField from "./FavoriteField.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -60,6 +61,7 @@ const commentText = computed(() => {
   >
     <template #extra>
       <VSpace>
+        <FavoriteField :post="post" />
         <RouterLink
           v-if="post.post.status?.inProgress"
           v-tooltip="$t('core.common.tooltips.unpublished_content_tip')"

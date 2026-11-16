@@ -47,6 +47,7 @@ api/plugin-v1alpha1-public-api.ts
 api/policy-alpha1-console-api.ts
 api/policy-template-v1alpha1-api.ts
 api/policy-v1alpha1-api.ts
+api/post-favorite-v1alpha1-api.ts
 api/post-v1alpha1-api.ts
 api/post-v1alpha1-console-api.ts
 api/post-v1alpha1-public-api.ts
@@ -241,6 +242,9 @@ models/policy-template-list.ts
 models/policy-template-spec.ts
 models/policy-template.ts
 models/policy.ts
+models/post-favorite-list.ts
+models/post-favorite-spec.ts
+models/post-favorite.ts
 models/post-list.ts
 models/post-request.ts
 models/post-spec.ts

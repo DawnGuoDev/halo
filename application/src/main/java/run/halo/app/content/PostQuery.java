@@ -12,6 +12,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.jspecify.annotations.Nullable;
 import org.springdoc.core.fn.builders.operation.Builder;
 import org.springframework.web.reactive.function.server.ServerRequest;
+import org.springframework.web.server.ServerWebInputException;
 import run.halo.app.core.extension.content.Post;
 import run.halo.app.extension.ListOptions;
 import run.halo.app.extension.router.IListRequest;
@@ -27,13 +28,56 @@ public class PostQuery extends SortableRequest {
 
     private final @Nullable String username;
 
+    private final boolean favoriteSupported;
+
     public PostQuery(ServerRequest request) {
-        this(request, null);
+        this(request, null, true);
     }
 
     public PostQuery(ServerRequest request, @Nullable String username) {
+        this(request, username, false);
+    }
+
+    private PostQuery(ServerRequest request, @Nullable String username, boolean favoriteSupported) {
         super(request.exchange());
         this.username = username;
+        this.favoriteSupported = favoriteSupported;
+    }
+
+    /**
+     * Whether the current query is allowed to read and filter personal favorites.
+     *
+     * <p>Only the console post list supports favorites. Other consumers of {@link PostQuery} must keep the previous
+     * behavior and response contract.
+     *
+     * @return true when favorite state is supported
+     */
+    public boolean isFavoriteSupported() {
+        return favoriteSupported;
+    }
+
+    /**
+     * Gets the favorite filter of the current user.
+     *
+     * @return {@code true} for favorited posts, {@code false} for unfavorited posts, or {@code null} when the filter is
+     *     absent or unsupported
+     * @throws ServerWebInputException when the value is neither {@code true} nor {@code false}
+     */
+    public @Nullable Boolean getFavorite() {
+        if (!favoriteSupported) {
+            return null;
+        }
+        var value = StringUtils.trimToNull(queryParams.getFirst("favorite"));
+        if (value == null) {
+            return null;
+        }
+        return switch (value) {
+            case "true" -> Boolean.TRUE;
+            case "false" -> Boolean.FALSE;
+            default ->
+                throw new ServerWebInputException(
+                        "Invalid value for query parameter 'favorite', expected 'true' or 'false'.");
+        };
     }
 
     public @Nullable String getPublishPhase() {
@@ -85,6 +129,23 @@ public class PostQuery extends SortableRequest {
                 .ifPresent(username -> builder.andQuery(equal("spec.owner", username)));
 
         return builder.build();
+    }
+
+    /**
+     * Builds the console-specific query parameters, including the personal favorite filter.
+     *
+     * @param builder operation builder
+     */
+    public static void buildConsoleParameters(Builder builder) {
+        buildParameters(builder);
+        builder.parameter(parameterBuilder()
+                .in(ParameterIn.QUERY)
+                .name("favorite")
+                .description("Filter posts by the current user's favorite state. 'true' returns favorited "
+                        + "posts, 'false' returns unfavorited posts, and omitting the parameter disables "
+                        + "the filter.")
+                .implementation(Boolean.class)
+                .required(false));
     }
 
     public static void buildParameters(Builder builder) {

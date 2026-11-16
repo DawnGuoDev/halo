@@ -1,10 +1,12 @@
 package run.halo.app.content.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.reactive.server.SecurityMockServerConfigurers.csrf;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -116,7 +118,95 @@ class ListedContentIntegrationTest {
                 .jsonPath("$.items[0].stats.totalComment")
                 .isEqualTo(3)
                 .jsonPath("$.items[0].stats.approvedComment")
-                .isEqualTo(2);
+                .isEqualTo(2)
+                .jsonPath("$.items[0].favorite")
+                .isEqualTo(false);
+    }
+
+    @Test
+    void shouldFavoritePostsAndFilterByFavoriteState() {
+        var owner = createUser("it-favorite-user-" + suffix, "IT Favorite User");
+        var postName = "it-favorite-post-" + suffix;
+        createPost(postName, owner.getMetadata().getName(), List.of(), List.of());
+
+        webTestClient
+                .post()
+                .uri("/apis/api.console.halo.run/v1alpha1/posts/{name}/favorite", postName)
+                .exchange()
+                .expectStatus()
+                .isNoContent();
+
+        // Favoriting is idempotent.
+        webTestClient
+                .post()
+                .uri("/apis/api.console.halo.run/v1alpha1/posts/{name}/favorite", postName)
+                .exchange()
+                .expectStatus()
+                .isNoContent();
+
+        assertThat(listTotal(postName, true)).isEqualTo(1);
+        assertThat(listTotal(postName, false)).isEqualTo(0);
+        assertThat(listTotal(postName, null)).isEqualTo(1);
+
+        webTestClient
+                .delete()
+                .uri("/apis/api.console.halo.run/v1alpha1/posts/{name}/favorite", postName)
+                .exchange()
+                .expectStatus()
+                .isNoContent();
+
+        await().atMost(Duration.ofSeconds(10))
+                .untilAsserted(() -> assertThat(listTotal(postName, true)).isEqualTo(0));
+        assertThat(listTotal(postName, false)).isEqualTo(1);
+    }
+
+    @SuppressWarnings("unchecked")
+    int listTotal(String keyword, Boolean favorite) {
+        var body = webTestClient
+                .get()
+                .uri(uriBuilder -> {
+                    uriBuilder
+                            .path("/apis/api.console.halo.run/v1alpha1/posts")
+                            .queryParam("keyword", keyword)
+                            .queryParam("page", 1)
+                            .queryParam("size", 10);
+                    if (favorite != null) {
+                        uriBuilder.queryParam("favorite", favorite);
+                    }
+                    return uriBuilder.build();
+                })
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody(Map.class)
+                .returnResult()
+                .getResponseBody();
+        return ((Number) body.get("total")).intValue();
+    }
+
+    @Test
+    void listMyPostsShouldNotExposeFavoriteField() {
+        var postName = "it-uc-post-" + suffix;
+        createPost(postName, "fake-user", List.of(), List.of());
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/apis/uc.api.content.halo.run/v1alpha1/posts")
+                        .queryParam("keyword", suffix)
+                        .queryParam("page", 1)
+                        .queryParam("size", 10)
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk()
+                .expectBody()
+                .jsonPath("$.total")
+                .isEqualTo(1)
+                .jsonPath("$.items[0].post.metadata.name")
+                .isEqualTo(postName)
+                .jsonPath("$.items[0].favorite")
+                .doesNotExist();
     }
 
     @Test

@@ -61,6 +61,8 @@ import IconSettings3Line from "~icons/ri/settings-3-line";
 import IconSettings from "~icons/ri/settings-4-line";
 import IconShieldUser from "~icons/ri/shield-user-line";
 import IconPhone from "~icons/ri/smartphone-line";
+import IconStarFill from "~icons/ri/star-fill";
+import IconStarLine from "~icons/ri/star-line";
 import IconStopCircle from "~icons/ri/stop-circle-line";
 import IconTablet from "~icons/ri/tablet-line";
 import IconTeam from "~icons/ri/team-fill";
@@ -142,6 +144,8 @@ export {
   IconSettings,
   IconSettings3Line,
   IconShieldUser,
+  IconStarFill,
+  IconStarLine,
   IconStopCircle,
   IconTablet,
   IconTeam,

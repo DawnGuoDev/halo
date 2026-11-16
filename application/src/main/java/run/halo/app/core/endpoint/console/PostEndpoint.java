@@ -8,6 +8,7 @@ import static run.halo.app.extension.MetadataUtil.nullSafeLabels;
 
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.security.Principal;
 import java.time.Duration;
 import java.util.Objects;
 import java.util.function.Predicate;
@@ -47,6 +48,7 @@ public class PostEndpoint implements CustomEndpoint {
 
     private int maxAttemptsWaitForPublish = 10;
     private final PostService postService;
+    private final PostFavoriteService postFavoriteService;
     private final ReactiveExtensionClient client;
 
     @Override
@@ -60,8 +62,35 @@ public class PostEndpoint implements CustomEndpoint {
                             .tag(tag)
                             .response(responseBuilder()
                                     .implementation(ListResult.generateGenericClass(ListedPost.class)));
-                    PostQuery.buildParameters(builder);
+                    PostQuery.buildConsoleParameters(builder);
                 })
+                .POST(
+                        "posts/{name}/favorite",
+                        this::favoritePost,
+                        builder -> builder.operationId("FavoritePost")
+                                .description("Favorite a post for the current user. The operation is idempotent.")
+                                .tag(tag)
+                                .parameter(parameterBuilder()
+                                        .name("name")
+                                        .description("metadata.name of the post to favorite.")
+                                        .in(ParameterIn.PATH)
+                                        .required(true)
+                                        .implementation(String.class))
+                                .response(responseBuilder().responseCode("204").description("No Content")))
+                .DELETE(
+                        "posts/{name}/favorite",
+                        this::unfavoritePost,
+                        builder -> builder.operationId("UnfavoritePost")
+                                .description("Remove a post from the current user's favorites. "
+                                        + "The operation is idempotent.")
+                                .tag(tag)
+                                .parameter(parameterBuilder()
+                                        .name("name")
+                                        .description("metadata.name of the post to unfavorite.")
+                                        .in(ParameterIn.PATH)
+                                        .required(true)
+                                        .implementation(String.class))
+                                .response(responseBuilder().responseCode("204").description("No Content")))
                 .GET(
                         "posts/{name}/head-content",
                         this::fetchHeadContent,
@@ -419,6 +448,24 @@ public class PostEndpoint implements CustomEndpoint {
         return postService
                 .listPost(postQuery)
                 .flatMap(listedPosts -> ServerResponse.ok().bodyValue(listedPosts));
+    }
+
+    Mono<ServerResponse> favoritePost(ServerRequest request) {
+        var postName = request.pathVariable("name");
+        return request.principal()
+                .map(Principal::getName)
+                .defaultIfEmpty("anonymous")
+                .flatMap(username -> postFavoriteService.favorite(username, postName))
+                .then(ServerResponse.noContent().build());
+    }
+
+    Mono<ServerResponse> unfavoritePost(ServerRequest request) {
+        var postName = request.pathVariable("name");
+        return request.principal()
+                .map(Principal::getName)
+                .defaultIfEmpty("anonymous")
+                .flatMap(username -> postFavoriteService.unfavorite(username, postName))
+                .then(ServerResponse.noContent().build());
     }
 
     /** Convenient for testing, to avoid waiting too long for post published when testing. */

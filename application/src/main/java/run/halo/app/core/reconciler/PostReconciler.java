@@ -7,6 +7,7 @@ import static run.halo.app.extension.ExtensionUtil.addFinalizers;
 import static run.halo.app.extension.ExtensionUtil.removeFinalizers;
 import static run.halo.app.extension.MetadataUtil.nullSafeAnnotations;
 import static run.halo.app.extension.MetadataUtil.nullSafeLabels;
+import static run.halo.app.extension.index.query.Queries.equal;
 import static run.halo.app.extension.index.query.Queries.in;
 
 import com.google.common.hash.Hashing;
@@ -34,6 +35,7 @@ import run.halo.app.core.extension.content.Constant;
 import run.halo.app.core.extension.content.Post;
 import run.halo.app.core.extension.content.Post.PostPhase;
 import run.halo.app.core.extension.content.Post.VisibleEnum;
+import run.halo.app.core.extension.content.PostFavorite;
 import run.halo.app.core.extension.content.Snapshot;
 import run.halo.app.core.extension.content.Tag;
 import run.halo.app.core.extension.notification.Subscription;
@@ -365,6 +367,16 @@ public class PostReconciler implements Reconciler<Reconciler.Request> {
         counterService
                 .deleteByName(MeterUtils.nameOf(Post.class, post.getMetadata().getName()))
                 .block(BLOCKING_TIMEOUT);
+
+        // clean up personal favorite relations
+        deleteFavoritesOfPost(post.getMetadata().getName());
+    }
+
+    private void deleteFavoritesOfPost(String postName) {
+        var listOptions = ListOptions.builder()
+                .andQuery(equal(PostFavorite.POST_NAME_INDEX, postName))
+                .build();
+        client.listAll(PostFavorite.class, listOptions, Sort.unsorted()).forEach(client::delete);
     }
 
     private String getExcerpt(Post post) {

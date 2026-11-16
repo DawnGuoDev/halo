@@ -131,6 +131,46 @@ export const PostV1alpha1ConsoleApiAxiosParamCreator = function (configuration?:
             };
         },
         /**
+         * Favorite a post for the current user. The operation is idempotent.
+         * @param {string} name metadata.name of the post to favorite.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        favoritePost: async (name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'name' is not null or undefined
+            assertParamExists('favoritePost', 'name', name)
+            const localVarPath = `/apis/api.console.halo.run/v1alpha1/posts/{name}/favorite`
+                .replace('{name}', encodeURIComponent(String(name)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * Fetch a post content snapshot reconstructed from its base snapshot.
          * @param {string} name metadata.name of the post.
          * @param {string} snapshotName Content snapshot metadata.name to fetch.
@@ -311,10 +351,11 @@ export const PostV1alpha1ConsoleApiAxiosParamCreator = function (configuration?:
          * @param {ListPostsPublishPhaseEnum} [publishPhase] Filter posts by publish phase. Supported values follow PostPhase, such as DRAFT, PENDING_APPROVAL, PUBLISHED, or FAILED.
          * @param {string} [keyword] Keyword used to match post title, slug, or excerpt.
          * @param {string} [categoryWithChildren] Category metadata name used to include posts in that category and its child categories.
+         * @param {boolean} [favorite] Filter posts by the current user\&#39;s favorite state. \&#39;true\&#39; returns favorited posts, \&#39;false\&#39; returns unfavorited posts, and omitting the parameter disables the filter.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        listPosts: async (page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, publishPhase?: ListPostsPublishPhaseEnum, keyword?: string, categoryWithChildren?: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        listPosts: async (page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, publishPhase?: ListPostsPublishPhaseEnum, keyword?: string, categoryWithChildren?: string, favorite?: boolean, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/apis/api.console.halo.run/v1alpha1/posts`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -365,6 +406,10 @@ export const PostV1alpha1ConsoleApiAxiosParamCreator = function (configuration?:
 
             if (categoryWithChildren !== undefined) {
                 localVarQueryParameter['categoryWithChildren'] = categoryWithChildren;
+            }
+
+            if (favorite !== undefined) {
+                localVarQueryParameter['favorite'] = favorite;
             }
 
             localVarHeaderParameter['Accept'] = '*/*';
@@ -510,6 +555,46 @@ export const PostV1alpha1ConsoleApiAxiosParamCreator = function (configuration?:
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
             localVarRequestOptions.data = serializeDataIfNeeded(revertSnapshotForPostParam, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Remove a post from the current user\'s favorites. The operation is idempotent.
+         * @param {string} name metadata.name of the post to unfavorite.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        unfavoritePost: async (name: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'name' is not null or undefined
+            assertParamExists('unfavoritePost', 'name', name)
+            const localVarPath = `/apis/api.console.halo.run/v1alpha1/posts/{name}/favorite`
+                .replace('{name}', encodeURIComponent(String(name)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication basicAuth required
+            // http basic authentication required
+            setBasicAuthToObject(localVarRequestOptions, configuration)
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -684,6 +769,18 @@ export const PostV1alpha1ConsoleApiFp = function(configuration?: Configuration) 
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Favorite a post for the current user. The operation is idempotent.
+         * @param {string} name metadata.name of the post to favorite.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async favoritePost(name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.favoritePost(name, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PostV1alpha1ConsoleApi.favoritePost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * Fetch a post content snapshot reconstructed from its base snapshot.
          * @param {string} name metadata.name of the post.
          * @param {string} snapshotName Content snapshot metadata.name to fetch.
@@ -742,11 +839,12 @@ export const PostV1alpha1ConsoleApiFp = function(configuration?: Configuration) 
          * @param {ListPostsPublishPhaseEnum} [publishPhase] Filter posts by publish phase. Supported values follow PostPhase, such as DRAFT, PENDING_APPROVAL, PUBLISHED, or FAILED.
          * @param {string} [keyword] Keyword used to match post title, slug, or excerpt.
          * @param {string} [categoryWithChildren] Category metadata name used to include posts in that category and its child categories.
+         * @param {boolean} [favorite] Filter posts by the current user\&#39;s favorite state. \&#39;true\&#39; returns favorited posts, \&#39;false\&#39; returns unfavorited posts, and omitting the parameter disables the filter.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async listPosts(page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, publishPhase?: ListPostsPublishPhaseEnum, keyword?: string, categoryWithChildren?: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ListedPostList>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.listPosts(page, size, labelSelector, fieldSelector, sort, publishPhase, keyword, categoryWithChildren, options);
+        async listPosts(page?: number, size?: number, labelSelector?: Array<string>, fieldSelector?: Array<string>, sort?: Array<string>, publishPhase?: ListPostsPublishPhaseEnum, keyword?: string, categoryWithChildren?: string, favorite?: boolean, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ListedPostList>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.listPosts(page, size, labelSelector, fieldSelector, sort, publishPhase, keyword, categoryWithChildren, favorite, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['PostV1alpha1ConsoleApi.listPosts']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -788,6 +886,18 @@ export const PostV1alpha1ConsoleApiFp = function(configuration?: Configuration) 
             const localVarAxiosArgs = await localVarAxiosParamCreator.revertToSpecifiedSnapshotForPost(name, revertSnapshotForPostParam, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['PostV1alpha1ConsoleApi.revertToSpecifiedSnapshotForPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * Remove a post from the current user\'s favorites. The operation is idempotent.
+         * @param {string} name metadata.name of the post to unfavorite.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async unfavoritePost(name: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.unfavoritePost(name, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['PostV1alpha1ConsoleApi.unfavoritePost']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -856,6 +966,15 @@ export const PostV1alpha1ConsoleApiFactory = function (configuration?: Configura
             return localVarFp.draftPost(requestParameters.postRequest, options).then((request) => request(axios, basePath));
         },
         /**
+         * Favorite a post for the current user. The operation is idempotent.
+         * @param {PostV1alpha1ConsoleApiFavoritePostRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        favoritePost(requestParameters: PostV1alpha1ConsoleApiFavoritePostRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.favoritePost(requestParameters.name, options).then((request) => request(axios, basePath));
+        },
+        /**
          * Fetch a post content snapshot reconstructed from its base snapshot.
          * @param {PostV1alpha1ConsoleApiFetchPostContentRequest} requestParameters Request parameters.
          * @param {*} [options] Override http request option.
@@ -898,7 +1017,7 @@ export const PostV1alpha1ConsoleApiFactory = function (configuration?: Configura
          * @throws {RequiredError}
          */
         listPosts(requestParameters: PostV1alpha1ConsoleApiListPostsRequest = {}, options?: RawAxiosRequestConfig): AxiosPromise<ListedPostList> {
-            return localVarFp.listPosts(requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, requestParameters.publishPhase, requestParameters.keyword, requestParameters.categoryWithChildren, options).then((request) => request(axios, basePath));
+            return localVarFp.listPosts(requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, requestParameters.publishPhase, requestParameters.keyword, requestParameters.categoryWithChildren, requestParameters.favorite, options).then((request) => request(axios, basePath));
         },
         /**
          * Publish a post. By default, the request waits until the release snapshot is available.
@@ -926,6 +1045,15 @@ export const PostV1alpha1ConsoleApiFactory = function (configuration?: Configura
          */
         revertToSpecifiedSnapshotForPost(requestParameters: PostV1alpha1ConsoleApiRevertToSpecifiedSnapshotForPostRequest, options?: RawAxiosRequestConfig): AxiosPromise<Post> {
             return localVarFp.revertToSpecifiedSnapshotForPost(requestParameters.name, requestParameters.revertSnapshotForPostParam, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * Remove a post from the current user\'s favorites. The operation is idempotent.
+         * @param {PostV1alpha1ConsoleApiUnfavoritePostRequest} requestParameters Request parameters.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        unfavoritePost(requestParameters: PostV1alpha1ConsoleApiUnfavoritePostRequest, options?: RawAxiosRequestConfig): AxiosPromise<void> {
+            return localVarFp.unfavoritePost(requestParameters.name, options).then((request) => request(axios, basePath));
         },
         /**
          * Unpublish a post so it is no longer served as published content.
@@ -977,6 +1105,16 @@ export interface PostV1alpha1ConsoleApiDeletePostContentRequest {
  */
 export interface PostV1alpha1ConsoleApiDraftPostRequest {
     readonly postRequest: PostRequest
+}
+
+/**
+ * Request parameters for favoritePost operation in PostV1alpha1ConsoleApi.
+ */
+export interface PostV1alpha1ConsoleApiFavoritePostRequest {
+    /**
+     * metadata.name of the post to favorite.
+     */
+    readonly name: string
 }
 
 /**
@@ -1067,6 +1205,11 @@ export interface PostV1alpha1ConsoleApiListPostsRequest {
      * Category metadata name used to include posts in that category and its child categories.
      */
     readonly categoryWithChildren?: string
+
+    /**
+     * Filter posts by the current user\&#39;s favorite state. \&#39;true\&#39; returns favorited posts, \&#39;false\&#39; returns unfavorited posts, and omitting the parameter disables the filter.
+     */
+    readonly favorite?: boolean
 }
 
 /**
@@ -1109,6 +1252,16 @@ export interface PostV1alpha1ConsoleApiRevertToSpecifiedSnapshotForPostRequest {
     readonly name: string
 
     readonly revertSnapshotForPostParam: RevertSnapshotForPostParam
+}
+
+/**
+ * Request parameters for unfavoritePost operation in PostV1alpha1ConsoleApi.
+ */
+export interface PostV1alpha1ConsoleApiUnfavoritePostRequest {
+    /**
+     * metadata.name of the post to unfavorite.
+     */
+    readonly name: string
 }
 
 /**
@@ -1170,6 +1323,16 @@ export class PostV1alpha1ConsoleApi extends BaseAPI {
     }
 
     /**
+     * Favorite a post for the current user. The operation is idempotent.
+     * @param {PostV1alpha1ConsoleApiFavoritePostRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public favoritePost(requestParameters: PostV1alpha1ConsoleApiFavoritePostRequest, options?: RawAxiosRequestConfig) {
+        return PostV1alpha1ConsoleApiFp(this.configuration).favoritePost(requestParameters.name, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * Fetch a post content snapshot reconstructed from its base snapshot.
      * @param {PostV1alpha1ConsoleApiFetchPostContentRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
@@ -1216,7 +1379,7 @@ export class PostV1alpha1ConsoleApi extends BaseAPI {
      * @throws {RequiredError}
      */
     public listPosts(requestParameters: PostV1alpha1ConsoleApiListPostsRequest = {}, options?: RawAxiosRequestConfig) {
-        return PostV1alpha1ConsoleApiFp(this.configuration).listPosts(requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, requestParameters.publishPhase, requestParameters.keyword, requestParameters.categoryWithChildren, options).then((request) => request(this.axios, this.basePath));
+        return PostV1alpha1ConsoleApiFp(this.configuration).listPosts(requestParameters.page, requestParameters.size, requestParameters.labelSelector, requestParameters.fieldSelector, requestParameters.sort, requestParameters.publishPhase, requestParameters.keyword, requestParameters.categoryWithChildren, requestParameters.favorite, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -1247,6 +1410,16 @@ export class PostV1alpha1ConsoleApi extends BaseAPI {
      */
     public revertToSpecifiedSnapshotForPost(requestParameters: PostV1alpha1ConsoleApiRevertToSpecifiedSnapshotForPostRequest, options?: RawAxiosRequestConfig) {
         return PostV1alpha1ConsoleApiFp(this.configuration).revertToSpecifiedSnapshotForPost(requestParameters.name, requestParameters.revertSnapshotForPostParam, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Remove a post from the current user\'s favorites. The operation is idempotent.
+     * @param {PostV1alpha1ConsoleApiUnfavoritePostRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public unfavoritePost(requestParameters: PostV1alpha1ConsoleApiUnfavoritePostRequest, options?: RawAxiosRequestConfig) {
+        return PostV1alpha1ConsoleApiFp(this.configuration).unfavoritePost(requestParameters.name, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

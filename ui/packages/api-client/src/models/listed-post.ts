@@ -41,6 +41,10 @@ export interface ListedPost {
      * Users that have contributed to the post content snapshots.
      */
     'contributors': Array<Contributor>;
+    /**
+     * Whether the current user has favorited the post. Only present in console post list responses.
+     */
+    'favorite'?: boolean;
     'owner': Contributor;
     'post': Post;
     'stats': Stats;

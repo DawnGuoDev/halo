@@ -1,6 +1,8 @@
 package run.halo.app.content.impl;
 
+import static run.halo.app.extension.index.query.Queries.equal;
 import static run.halo.app.extension.index.query.Queries.in;
+import static run.halo.app.extension.index.query.Queries.not;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -11,9 +13,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.Set;
 import java.util.function.ToIntFunction;
 import java.util.function.UnaryOperator;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.data.domain.Sort;
@@ -52,30 +58,37 @@ public class PostServiceImpl extends AbstractContentService implements PostServi
     private final CounterService counterService;
     private final UserService userService;
     private final CategoryService categoryService;
+    private final PostFavoriteService postFavoriteService;
 
     public PostServiceImpl(
             ReactiveExtensionClient client,
             CounterService counterService,
             UserService userService,
-            CategoryService categoryService) {
+            CategoryService categoryService,
+            PostFavoriteService postFavoriteService) {
         super(client);
         this.client = client;
         this.counterService = counterService;
         this.userService = userService;
         this.categoryService = categoryService;
+        this.postFavoriteService = postFavoriteService;
     }
 
     @Override
     public Mono<ListResult<ListedPost>> listPost(PostQuery query) {
         return buildListOptions(query)
                 .flatMap(listOptions -> client.listBy(Post.class, listOptions, query.toPageRequest()))
-                .flatMap(listResult -> assembleListedPosts(listResult.get().toList())
+                .flatMap(listResult -> assembleListedPosts(listResult.get().toList(), query.isFavoriteSupported())
                         .map(listedPosts -> new ListResult<>(
                                 listResult.getPage(), listResult.getSize(), listResult.getTotal(), listedPosts)))
                 .defaultIfEmpty(ListResult.emptyResult());
     }
 
     Mono<ListOptions> buildListOptions(PostQuery query) {
+        return resolveCategoryListOptions(query).flatMap(listOptions -> applyFavoriteFilter(query, listOptions));
+    }
+
+    private Mono<ListOptions> resolveCategoryListOptions(PostQuery query) {
         var categoryName = query.getCategoryWithChildren();
         if (categoryName == null) {
             return Mono.just(query.toListOptions());
@@ -92,7 +105,48 @@ public class PostServiceImpl extends AbstractContentService implements PostServi
         });
     }
 
-    private Mono<List<ListedPost>> assembleListedPosts(List<Post> posts) {
+    /**
+     * Applies the personal favorite filter on top of the other list conditions.
+     *
+     * <p>The favorite relation is keyed by the authenticated user, so the result is always scoped to that user.
+     * Favorited results never include recycled posts even when the caller does not pass {@code deleted=false}.
+     *
+     * <p>Only the favorite post names of the current user are loaded (bounded by that user's favorites, never the whole
+     * post corpus) and pushed into the indexed post query, so paging and sorting stay server-side.
+     *
+     * <p>Returns an empty {@link Mono} when the filter can never match, so that the caller short-circuits to an empty
+     * page without executing the post query.
+     */
+    private Mono<ListOptions> applyFavoriteFilter(PostQuery query, ListOptions listOptions) {
+        if (!query.isFavoriteSupported()) {
+            return Mono.just(listOptions);
+        }
+        var favorite = query.getFavorite();
+        if (favorite == null) {
+            return Mono.just(listOptions);
+        }
+        var fieldSelector = Optional.ofNullable(listOptions.getFieldSelector())
+                .orElseGet(FieldSelector::all)
+                .andQuery(equal("spec.deleted", false));
+        listOptions.setFieldSelector(fieldSelector);
+        return getContextUsername()
+                .flatMapMany(postFavoriteService::listFavoritePostNames)
+                .collectList()
+                .flatMap(favoritePostNames -> {
+                    if (BooleanUtils.isTrue(favorite)) {
+                        if (favoritePostNames.isEmpty()) {
+                            return Mono.empty();
+                        }
+                        listOptions.setFieldSelector(fieldSelector.andQuery(in("metadata.name", favoritePostNames)));
+                    } else if (!favoritePostNames.isEmpty()) {
+                        listOptions.setFieldSelector(
+                                fieldSelector.andQuery(not(in("metadata.name", favoritePostNames))));
+                    }
+                    return Mono.just(listOptions);
+                });
+    }
+
+    private Mono<List<ListedPost>> assembleListedPosts(List<Post> posts, boolean withFavorite) {
         if (posts.isEmpty()) {
             return Mono.just(List.of());
         }
@@ -125,16 +179,36 @@ public class PostServiceImpl extends AbstractContentService implements PostServi
         var tagsMono = listTags(tagNames).collectList();
         var categoriesMono = listCategories(categoryNames).collectList();
         var usersMono = fetchUsersByName(List.copyOf(usernames));
+        var favoriteNamesMono = fetchFavoritePostNames(posts, withFavorite);
 
-        return Mono.zip(statsMono, tagsMono, categoriesMono, usersMono).map(tuple -> {
-            var statsByCounterName = tuple.getT1();
-            var tags = tuple.getT2();
-            var categories = tuple.getT3();
-            var usersByName = tuple.getT4();
-            return posts.stream()
-                    .map(post -> toListedPost(post, statsByCounterName, tags, categories, usersByName))
-                    .toList();
-        });
+        return Mono.zip(statsMono, tagsMono, categoriesMono, usersMono, favoriteNamesMono)
+                .map(tuple -> {
+                    var statsByCounterName = tuple.getT1();
+                    var tags = tuple.getT2();
+                    var categories = tuple.getT3();
+                    var usersByName = tuple.getT4();
+                    var favoriteNames = tuple.getT5();
+                    return posts.stream()
+                            .map(post -> toListedPost(
+                                    post,
+                                    statsByCounterName,
+                                    tags,
+                                    categories,
+                                    usersByName,
+                                    favoriteNames,
+                                    withFavorite))
+                            .toList();
+                });
+    }
+
+    private Mono<Set<String>> fetchFavoritePostNames(List<Post> posts, boolean withFavorite) {
+        if (!withFavorite) {
+            return Mono.just(Set.of());
+        }
+        var postNames = posts.stream().map(post -> post.getMetadata().getName()).toList();
+        return getContextUsername()
+                .flatMapMany(username -> postFavoriteService.listFavoritePostNames(username, postNames))
+                .collect(Collectors.toSet());
     }
 
     private Mono<Map<String, Stats>> fetchStatsByPostName(List<Post> posts) {
@@ -159,8 +233,13 @@ public class PostServiceImpl extends AbstractContentService implements PostServi
             Map<String, Stats> statsByCounterName,
             List<Tag> tags,
             List<Category> categories,
-            Map<String, Contributor> usersByName) {
+            Map<String, Contributor> usersByName,
+            Set<String> favoriteNames,
+            boolean withFavorite) {
         var listedPost = new ListedPost().setPost(post);
+        if (withFavorite) {
+            listedPost.setFavorite(favoriteNames.contains(post.getMetadata().getName()));
+        }
 
         var counterName = MeterUtils.nameOf(Post.class, post.getMetadata().getName());
         listedPost.setStats(statsByCounterName.getOrDefault(counterName, Stats.empty()));

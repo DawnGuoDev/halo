@@ -1312,6 +1312,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Filter posts by the current user\u0027s favorite state. \u0027true\u0027 returns favorited posts, \u0027false\u0027 returns unfavorited posts, and omitting the parameter disables the filter.",
+            "in": "query",
+            "name": "favorite",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -1515,6 +1523,54 @@
               }
             },
             "description": "default response"
+          }
+        },
+        "tags": [
+          "PostV1alpha1Console"
+        ]
+      }
+    },
+    "/apis/api.console.halo.run/v1alpha1/posts/{name}/favorite": {
+      "delete": {
+        "description": "Remove a post from the current user\u0027s favorites. The operation is idempotent.",
+        "operationId": "UnfavoritePost",
+        "parameters": [
+          {
+            "description": "metadata.name of the post to unfavorite.",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "PostV1alpha1Console"
+        ]
+      },
+      "post": {
+        "description": "Favorite a post for the current user. The operation is idempotent.",
+        "operationId": "FavoritePost",
+        "parameters": [
+          {
+            "description": "metadata.name of the post to favorite.",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           }
         },
         "tags": [
@@ -5418,6 +5474,10 @@
             "items": {
               "$ref": "#/components/schemas/Contributor"
             }
+          },
+          "favorite": {
+            "type": "boolean",
+            "description": "Whether the current user has favorited the post. Only present in console post list responses."
           },
           "owner": {
             "$ref": "#/components/schemas/Contributor"

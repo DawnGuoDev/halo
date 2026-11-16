@@ -24,7 +24,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
 import { chunk } from "es-toolkit";
 import type { Ref } from "vue";
-import { provide, ref, watch } from "vue";
+import { computed, provide, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import CategoryFilterDropdown from "@/components/filter/CategoryFilterDropdown.vue";
 import TagFilterDropdown from "@/components/filter/TagFilterDropdown.vue";
@@ -53,6 +53,14 @@ const size = useRouteQuery<number>("size", 20, {
 const selectedVisible = useRouteQuery<
   "PUBLIC" | "INTERNAL" | "PRIVATE" | undefined
 >("visible");
+const selectedFavorite = useRouteQuery<"true" | "false" | undefined>(
+  "favorite",
+  undefined,
+  {
+    transform: (value) =>
+      value === "true" || value === "false" ? value : undefined,
+  }
+);
 const selectedPublishStatus = useRouteQuery<string | undefined>("status");
 const selectedSort = useRouteQuery<string | undefined>("sort");
 const selectedCategory = useRouteQuery<string | undefined>("category");
@@ -62,10 +70,12 @@ const keyword = useRouteQuery<string>("keyword", "");
 const total = ref(0);
 const hasPrevious = ref(false);
 const hasNext = ref(false);
+const baseTotalWithoutFavorite = ref<number | null>(null);
 
 watch(
   () => [
     selectedVisible.value,
+    selectedFavorite.value,
     selectedPublishStatus.value,
     selectedSort.value,
     selectedCategory.value,
@@ -93,6 +103,7 @@ const {
     selectedContributor,
     selectedPublishStatus,
     selectedVisible,
+    selectedFavorite,
     selectedSort,
     keyword,
   ],
@@ -120,6 +131,11 @@ const {
       labelSelector.push(selectedPublishStatus.value);
     }
 
+    const favorite =
+      selectedFavorite.value === undefined
+        ? undefined
+        : selectedFavorite.value === "true";
+
     const { data } = await consoleApiClient.content.post.listPosts({
       labelSelector,
       fieldSelector,
@@ -127,11 +143,28 @@ const {
       size: size.value,
       sort: [selectedSort.value].filter(Boolean) as string[],
       keyword: keyword.value,
+      favorite,
     });
 
     total.value = data.total;
     hasNext.value = data.hasNext;
     hasPrevious.value = data.hasPrevious;
+
+    if (favorite !== undefined && data.total === 0) {
+      // Distinguish an empty favorite result from a completely empty post list.
+      const { data: unfilteredData } =
+        await consoleApiClient.content.post.listPosts({
+          labelSelector,
+          fieldSelector,
+          page: 1,
+          size: 1,
+          sort: [selectedSort.value].filter(Boolean) as string[],
+          keyword: keyword.value,
+        });
+      baseTotalWithoutFavorite.value = unfilteredData.total;
+    } else {
+      baseTotalWithoutFavorite.value = null;
+    }
 
     return data.items;
   },
@@ -166,6 +199,41 @@ const {
     return hasCancelingPublishPost ? 1000 : false;
   },
 });
+
+const favoriteEmptyState = computed<"favorite" | "unfavorite" | null>(() => {
+  if (
+    !selectedFavorite.value ||
+    posts.value?.length ||
+    !baseTotalWithoutFavorite.value
+  ) {
+    return null;
+  }
+  return selectedFavorite.value === "true" ? "favorite" : "unfavorite";
+});
+
+const handleClearFavoriteFilter = () => {
+  selectedFavorite.value = undefined;
+  page.value = 1;
+};
+
+watch(
+  () => [posts.value, total.value, isFetching.value] as const,
+  () => {
+    if (
+      !selectedFavorite.value ||
+      isFetching.value ||
+      posts.value?.length ||
+      total.value <= 0 ||
+      page.value <= 1
+    ) {
+      return;
+    }
+    // The current page became empty because rows were removed from the filtered
+    // result. Fall back to the last page that still has data.
+    const lastPage = Math.max(1, Math.ceil(total.value / size.value));
+    page.value = Math.min(page.value - 1, lastPage);
+  }
+);
 
 const handleOpenSettingModal = async (post: Post) => {
   const { data } = await coreApiClient.content.post.getPost({
@@ -468,6 +536,22 @@ watch(
                     },
                   ]"
                 />
+                <VFilterDropdown
+                  v-model="selectedFavorite"
+                  :label="$t('core.post.filters.favorite.label')"
+                  show-clear-option
+                  :clear-label="t('core.common.filters.item_labels.all')"
+                  :options="[
+                    {
+                      label: t('core.post.filters.favorite.items.favorited'),
+                      value: 'true',
+                    },
+                    {
+                      label: t('core.post.filters.favorite.items.unfavorited'),
+                      value: 'false',
+                    },
+                  ]"
+                />
                 <CategoryFilterDropdown
                   v-model="selectedCategory"
                   :label="$t('core.post.filters.category.label')"
@@ -549,6 +633,26 @@ watch(
       <VLoading v-if="isLoading" />
       <Transition v-else-if="!posts?.length" appear name="fade">
         <VEmpty
+          v-if="favoriteEmptyState"
+          :message="
+            favoriteEmptyState === 'favorite'
+              ? $t('core.post.empty.favorite.description')
+              : $t('core.post.empty.unfavorite.description')
+          "
+          :title="
+            favoriteEmptyState === 'favorite'
+              ? $t('core.post.empty.favorite.title')
+              : $t('core.post.empty.unfavorite.title')
+          "
+        >
+          <template #actions>
+            <VButton @click="handleClearFavoriteFilter">
+              {{ $t("core.post.empty.favorite.action") }}
+            </VButton>
+          </template>
+        </VEmpty>
+        <VEmpty
+          v-else
           :message="$t('core.post.empty.message')"
           :title="$t('core.post.empty.title')"
         >

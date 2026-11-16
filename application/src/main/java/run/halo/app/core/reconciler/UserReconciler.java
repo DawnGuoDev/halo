@@ -28,6 +28,7 @@ import run.halo.app.core.extension.RoleBinding;
 import run.halo.app.core.extension.User;
 import run.halo.app.core.extension.UserConnection;
 import run.halo.app.core.extension.attachment.Attachment;
+import run.halo.app.core.extension.content.PostFavorite;
 import run.halo.app.core.extension.service.AttachmentService;
 import run.halo.app.core.user.service.RoleService;
 import run.halo.app.core.user.service.UserPreCreatingHandler;
@@ -77,12 +78,14 @@ public class UserReconciler implements Reconciler<Request>, UserPreCreatingHandl
                 var connectionsPending = deleteUserConnections(request.name());
                 var roleBindingsPending = deleteUserRoleBindings(request.name());
                 var avatarsPending = deleteUserAvatars(user);
+                var postFavoritesPending = deleteUserPostFavorites(request.name());
                 if (rememberMeTokensPending
                         || devicesPending
                         || personalAccessTokensPending
                         || connectionsPending
                         || roleBindingsPending
-                        || avatarsPending) {
+                        || avatarsPending
+                        || postFavoritesPending) {
                     throw new RequeueException(new Result(true, null), "User data is not deleted yet");
                 }
                 removeFinalizers(user.getMetadata(), Set.of(FINALIZER_NAME));
@@ -238,6 +241,18 @@ public class UserReconciler implements Reconciler<Request>, UserPreCreatingHandl
                         deviceService.revoke(username, device.getMetadata().getName()))
                 .then()
                 .block(BLOCKING_TIMEOUT);
+        return true;
+    }
+
+    boolean deleteUserPostFavorites(String username) {
+        var listOptions = ListOptions.builder()
+                .andQuery(equal(PostFavorite.USERNAME_INDEX, username))
+                .build();
+        var favorites = client.listAll(PostFavorite.class, listOptions, defaultSort());
+        if (CollectionUtils.isEmpty(favorites)) {
+            return false;
+        }
+        favorites.forEach(client::delete);
         return true;
     }
 

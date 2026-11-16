@@ -2581,6 +2581,10 @@
               "$ref": "#/components/schemas/Contributor"
             }
           },
+          "favorite": {
+            "type": "boolean",
+            "description": "Whether the current user has favorited the post. Only present in console post list responses."
+          },
           "owner": {
             "$ref": "#/components/schemas/Contributor"
           },

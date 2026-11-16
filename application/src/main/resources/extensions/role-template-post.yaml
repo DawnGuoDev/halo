@@ -55,3 +55,6 @@ rules:
         "posts/content",
       ]
     verbs: ["get", "list"]
+  - apiGroups: ["api.console.halo.run"]
+    resources: ["posts/favorite"]
+    verbs: ["create", "delete"]

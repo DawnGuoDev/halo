@@ -3445,6 +3445,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "Filter posts by the current user\u0027s favorite state. \u0027true\u0027 returns favorited posts, \u0027false\u0027 returns unfavorited posts, and omitting the parameter disables the filter.",
+            "in": "query",
+            "name": "favorite",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -3648,6 +3656,54 @@
               }
             },
             "description": "default response"
+          }
+        },
+        "tags": [
+          "PostV1alpha1Console"
+        ]
+      }
+    },
+    "/apis/api.console.halo.run/v1alpha1/posts/{name}/favorite": {
+      "delete": {
+        "description": "Remove a post from the current user\u0027s favorites. The operation is idempotent.",
+        "operationId": "UnfavoritePost",
+        "parameters": [
+          {
+            "description": "metadata.name of the post to unfavorite.",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "tags": [
+          "PostV1alpha1Console"
+        ]
+      },
+      "post": {
+        "description": "Favorite a post for the current user. The operation is idempotent.",
+        "operationId": "FavoritePost",
+        "parameters": [
+          {
+            "description": "metadata.name of the post to favorite.",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           }
         },
         "tags": [
@@ -8692,6 +8748,243 @@
         },
         "tags": [
           "CommentV1alpha1"
+        ]
+      }
+    },
+    "/apis/content.halo.run/v1alpha1/postfavorites": {
+      "get": {
+        "description": "List PostFavorite",
+        "operationId": "listPostFavorite",
+        "parameters": [
+          {
+            "description": "Page number. Default is 0.",
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "description": "Size number. Default is 0.",
+            "in": "query",
+            "name": "size",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "description": "Label selector. e.g.: hidden!\u003dtrue",
+            "in": "query",
+            "name": "labelSelector",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "description": "Field selector. e.g.: metadata.name\u003d\u003dhalo",
+            "in": "query",
+            "name": "fieldSelector",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "description": "Sorting criteria in the format: property,(asc|desc). Default sort order is ascending. Multiple sort criteria are supported.",
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostFavoriteList"
+                }
+              }
+            },
+            "description": "Response postfavorites"
+          }
+        },
+        "tags": [
+          "PostFavoriteV1alpha1"
+        ]
+      },
+      "post": {
+        "description": "Create PostFavorite",
+        "operationId": "createPostFavorite",
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/PostFavorite"
+              }
+            }
+          },
+          "description": "Fresh postfavorite"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostFavorite"
+                }
+              }
+            },
+            "description": "Response postfavorites created just now"
+          }
+        },
+        "tags": [
+          "PostFavoriteV1alpha1"
+        ]
+      }
+    },
+    "/apis/content.halo.run/v1alpha1/postfavorites/{name}": {
+      "delete": {
+        "description": "Delete PostFavorite",
+        "operationId": "deletePostFavorite",
+        "parameters": [
+          {
+            "description": "Name of postfavorite",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Response postfavorite deleted just now"
+          }
+        },
+        "tags": [
+          "PostFavoriteV1alpha1"
+        ]
+      },
+      "get": {
+        "description": "Get PostFavorite",
+        "operationId": "getPostFavorite",
+        "parameters": [
+          {
+            "description": "Name of postfavorite",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostFavorite"
+                }
+              }
+            },
+            "description": "Response single postfavorite"
+          }
+        },
+        "tags": [
+          "PostFavoriteV1alpha1"
+        ]
+      },
+      "patch": {
+        "description": "Patch PostFavorite",
+        "operationId": "patchPostFavorite",
+        "parameters": [
+          {
+            "description": "Name of postfavorite",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json-patch+json": {
+              "schema": {
+                "$ref": "#/components/schemas/JsonPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostFavorite"
+                }
+              }
+            },
+            "description": "Response postfavorite patched just now"
+          }
+        },
+        "tags": [
+          "PostFavoriteV1alpha1"
+        ]
+      },
+      "put": {
+        "description": "Update PostFavorite",
+        "operationId": "updatePostFavorite",
+        "parameters": [
+          {
+            "description": "Name of postfavorite",
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "*/*": {
+              "schema": {
+                "$ref": "#/components/schemas/PostFavorite"
+              }
+            }
+          },
+          "description": "Updated postfavorite"
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostFavorite"
+                }
+              }
+            },
+            "description": "Response postfavorites updated just now"
+          }
+        },
+        "tags": [
+          "PostFavoriteV1alpha1"
         ]
       }
     },
@@ -19192,6 +19485,10 @@
               "$ref": "#/components/schemas/Contributor"
             }
           },
+          "favorite": {
+            "type": "boolean",
+            "description": "Whether the current user has favorited the post. Only present in console post list responses."
+          },
           "owner": {
             "$ref": "#/components/schemas/Contributor"
           },
@@ -21320,6 +21617,109 @@
           }
         },
         "description": "Multipart payload for uploading a post attachment."
+      },
+      "PostFavorite": {
+        "required": [
+          "apiVersion",
+          "kind",
+          "metadata",
+          "spec"
+        ],
+        "type": "object",
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/Metadata"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/PostFavoriteSpec"
+          }
+        },
+        "description": "Personal favorite relation between a user and a post.\n\n \u003cp\u003eThe relation is keyed by the user \u003ccode\u003emetadata.name\u003c/code\u003e and the post \u003ccode\u003emetadata.name\u003c/code\u003e. It is intentionally\n stored outside of {@link Post Post} so that favorites stay private to the owner and never leak into theme rendering or\n other users\u0027 views."
+      },
+      "PostFavoriteList": {
+        "required": [
+          "first",
+          "hasNext",
+          "hasPrevious",
+          "items",
+          "last",
+          "page",
+          "size",
+          "total",
+          "totalPages"
+        ],
+        "type": "object",
+        "properties": {
+          "first": {
+            "type": "boolean",
+            "description": "Indicates whether current page is the first page."
+          },
+          "hasNext": {
+            "type": "boolean",
+            "description": "Indicates whether current page has next page."
+          },
+          "hasPrevious": {
+            "type": "boolean",
+            "description": "Indicates whether current page has previous page."
+          },
+          "items": {
+            "type": "array",
+            "description": "A chunk of items.",
+            "items": {
+              "$ref": "#/components/schemas/PostFavorite"
+            }
+          },
+          "last": {
+            "type": "boolean",
+            "description": "Indicates whether current page is the last page."
+          },
+          "page": {
+            "type": "integer",
+            "description": "Page number, starts from 1. If not set or equal to 0, it means no pagination.",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "description": "Size of each page. If not set or equal to 0, it means no pagination.",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "description": "Total elements.",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "description": "Indicates total pages.",
+            "format": "int64"
+          }
+        }
+      },
+      "PostFavoriteSpec": {
+        "required": [
+          "postName",
+          "username"
+        ],
+        "type": "object",
+        "properties": {
+          "postName": {
+            "minLength": 1,
+            "type": "string",
+            "description": "\u003ccode\u003emetadata.name\u003c/code\u003e of the favorited post."
+          },
+          "username": {
+            "minLength": 1,
+            "type": "string",
+            "description": "\u003ccode\u003emetadata.name\u003c/code\u003e of the user who owns the favorite."
+          }
+        },
+        "description": "Owner and favorite target of this relation."
       },
       "PostList": {
         "required": [

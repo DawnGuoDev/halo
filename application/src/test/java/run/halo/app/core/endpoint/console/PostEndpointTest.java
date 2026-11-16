@@ -17,6 +17,7 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Mono;
 import run.halo.app.content.ContentUpdateParam;
+import run.halo.app.content.PostFavoriteService;
 import run.halo.app.content.PostRequest;
 import run.halo.app.content.PostService;
 import run.halo.app.content.TestPost;
@@ -38,6 +39,9 @@ class PostEndpointTest {
     PostService postService;
 
     @Mock
+    PostFavoriteService postFavoriteService;
+
+    @Mock
     ReactiveExtensionClient client;
 
     @Mock
@@ -53,6 +57,34 @@ class PostEndpointTest {
         postEndpoint.setMaxAttemptsWaitForPublish(3);
         webTestClient =
                 WebTestClient.bindToRouterFunction(postEndpoint.endpoint()).build();
+    }
+
+    @Test
+    void favoritePost() {
+        when(postFavoriteService.favorite("anonymous", "post-1")).thenReturn(Mono.empty());
+
+        webTestClient
+                .post()
+                .uri("/posts/post-1/favorite")
+                .exchange()
+                .expectStatus()
+                .isNoContent();
+
+        verify(postFavoriteService).favorite("anonymous", "post-1");
+    }
+
+    @Test
+    void unfavoritePost() {
+        when(postFavoriteService.unfavorite("anonymous", "post-1")).thenReturn(Mono.empty());
+
+        webTestClient
+                .delete()
+                .uri("/posts/post-1/favorite")
+                .exchange()
+                .expectStatus()
+                .isNoContent();
+
+        verify(postFavoriteService).unfavorite("anonymous", "post-1");
     }
 
     @Test

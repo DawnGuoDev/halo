@@ -16,13 +16,17 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import run.halo.app.content.CategoryService;
 import run.halo.app.content.Contributor;
+import run.halo.app.content.PostFavoriteService;
 import run.halo.app.content.PostQuery;
 import run.halo.app.content.Stats;
 import run.halo.app.core.counter.CounterService;
@@ -54,11 +58,14 @@ class PostServiceImplTest {
     @Mock
     CategoryService categoryService;
 
+    @Mock
+    PostFavoriteService postFavoriteService;
+
     PostServiceImpl postService;
 
     @BeforeEach
     void setUp() {
-        postService = new PostServiceImpl(client, counterService, userService, categoryService);
+        postService = new PostServiceImpl(client, counterService, userService, categoryService, postFavoriteService);
     }
 
     @Test
@@ -141,6 +148,80 @@ class PostServiceImplTest {
         verify(counterService, never()).getByNames(anyCollection());
         verify(userService, never()).getUsersOrGhosts(anyList());
         verify(client, never()).listAll(any(), any(ListOptions.class), any(Sort.class));
+    }
+
+    @Test
+    void shouldAssembleFavoriteStateForConsoleList() {
+        var post1 = post("post-1", "user-1", List.of(), List.of());
+        var post2 = post("post-2", "user-1", List.of(), List.of());
+        var pageRequest = PageRequestImpl.of(1, 20);
+        var query = mock(PostQuery.class);
+        when(query.toListOptions()).thenReturn(new ListOptions());
+        when(query.toPageRequest()).thenReturn(pageRequest);
+        when(query.isFavoriteSupported()).thenReturn(true);
+        when(query.getFavorite()).thenReturn(null);
+        when(client.listBy(eq(Post.class), any(ListOptions.class), eq(pageRequest)))
+                .thenReturn(Mono.just(new ListResult<>(1, 20, 2, List.of(post1, post2))));
+        when(counterService.getByNames(anyCollection())).thenReturn(Flux.empty());
+        when(userService.getUsersOrGhosts(anyList())).thenReturn(Flux.empty());
+        when(postFavoriteService.listFavoritePostNames(eq("alice"), anyCollection()))
+                .thenReturn(Flux.just("post-1"));
+
+        var result = postService
+                .listPost(query)
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(
+                        new TestingAuthenticationToken("alice", "password")))
+                .block();
+
+        assertThat(result).isNotNull();
+        assertThat(result.getItems()).hasSize(2);
+        assertThat(result.getItems().get(0).getFavorite()).isTrue();
+        assertThat(result.getItems().get(1).getFavorite()).isFalse();
+        verify(postFavoriteService, times(1)).listFavoritePostNames(eq("alice"), anyCollection());
+    }
+
+    @Test
+    void shouldFilterByFavoriteBeforePaging() {
+        var pageRequest = PageRequestImpl.of(1, 20);
+        var query = mock(PostQuery.class);
+        when(query.toListOptions()).thenReturn(new ListOptions());
+        when(query.toPageRequest()).thenReturn(pageRequest);
+        when(query.isFavoriteSupported()).thenReturn(true);
+        when(query.getFavorite()).thenReturn(true);
+        when(postFavoriteService.listFavoritePostNames("alice")).thenReturn(Flux.just("post-1", "post-2"));
+        when(client.listBy(eq(Post.class), any(ListOptions.class), eq(pageRequest)))
+                .thenReturn(Mono.just(ListResult.emptyResult()));
+
+        postService
+                .listPost(query)
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(
+                        new TestingAuthenticationToken("alice", "password")))
+                .block();
+
+        var captor = ArgumentCaptor.forClass(ListOptions.class);
+        verify(client).listBy(eq(Post.class), captor.capture(), eq(pageRequest));
+        var fieldQuery = captor.getValue().getFieldSelector().query().toString();
+        assertThat(fieldQuery).contains("spec.deleted = false");
+        assertThat(fieldQuery).contains("metadata.name IN (post-1, post-2)");
+    }
+
+    @Test
+    void shouldReturnEmptyResultWhenFavoritedSetIsEmpty() {
+        var query = mock(PostQuery.class);
+        when(query.toListOptions()).thenReturn(new ListOptions());
+        when(query.isFavoriteSupported()).thenReturn(true);
+        when(query.getFavorite()).thenReturn(true);
+        when(postFavoriteService.listFavoritePostNames("alice")).thenReturn(Flux.empty());
+
+        var result = postService
+                .listPost(query)
+                .contextWrite(ReactiveSecurityContextHolder.withAuthentication(
+                        new TestingAuthenticationToken("alice", "password")))
+                .block();
+
+        assertThat(result).isNotNull();
+        assertThat(result.getItems()).isEmpty();
+        verify(client, never()).listBy(eq(Post.class), any(ListOptions.class), any());
     }
 
     static Post post(String name, String owner, List<String> tags, List<String> categories) {
