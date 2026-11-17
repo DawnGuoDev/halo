@@ -1,0 +1,166 @@
+/*
+ * Isolated E2E test project for Halo.
+ *
+ * - Only test-scope dependencies: TestNG drives both backend HTTP and Playwright Java tests.
+ * - Nothing here is attached to the root `check` / `build` lifecycle, so default builds
+ *   never start a browser or a Halo instance.
+ * - Backend and frontend suites write into the same Allure results directory, and
+ *   `e2eAllureReport` renders one report for both.
+ *
+ * Run with: ./gradlew :e2e:help
+ */
+import org.gradle.api.tasks.testing.Test
+
+plugins {
+    id 'java'
+}
+
+group = 'run.halo.e2e'
+description = 'Halo end-to-end tests (TestNG + Playwright Java + Allure)'
+
+def allureVersion = '2.32.0'
+def playwrightVersion = '1.56.0'
+def testngVersion = '7.10.2'
+def allureResultsDir = layout.buildDirectory.dir('allure-results')
+def allureReportDir = layout.buildDirectory.dir('reports/allure-report')
+def e2eScreenshotsDir = layout.buildDirectory.dir('e2e-screenshots')
+def e2eTempDir = layout.buildDirectory.dir('e2e-tmp')
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = 'UTF-8'
+}
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    allureCli
+}
+
+dependencies {
+    testImplementation "org.testng:testng:${testngVersion}"
+    testImplementation "io.qameta.allure:allure-testng:${allureVersion}"
+    testImplementation "com.microsoft.playwright:playwright:${playwrightVersion}"
+
+    allureCli "io.qameta.allure:allure-commandline:${allureVersion}"
+}
+
+def applyE2ESystemProperties = { Test task ->
+    task.systemProperty 'allure.results.directory', allureResultsDir.get().asFile.absolutePath
+    task.systemProperty 'e2e.frontend.screenshot.dir', e2eScreenshotsDir.get().asFile.absolutePath
+    task.systemProperty 'e2e.temp.dir', e2eTempDir.get().asFile.absolutePath
+}
+
+// The instance must run the current working tree: application classes plus the resolved
+// runtime classpath written by :application:writeE2eRuntimeClasspath.
+def applicationReady = [
+        project(':application').tasks.named('classes'),
+        project(':api').tasks.named('classes'),
+        project(':application').tasks.named('writeE2eRuntimeClasspath'),
+]
+
+tasks.register('testBackend', Test) {
+    group = 'verification'
+    description = 'Runs backend E2E tests against a real, self-started Halo instance (no browser).'
+    dependsOn applicationReady
+    useTestNG {
+        suites 'config/testng-backend.xml'
+    }
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    outputs.upToDateWhen { false }
+    maxHeapSize = '1G'
+    doFirst { applyE2ESystemProperties(delegate as Test) }
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat 'full'
+        showStackTraces true
+    }
+}
+
+tasks.register('testFrontend', Test) {
+    group = 'verification'
+    description = 'Runs Playwright Java console E2E tests against a real, self-started Halo instance.'
+    dependsOn applicationReady
+    useTestNG {
+        suites 'config/testng-frontend.xml'
+    }
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    outputs.upToDateWhen { false }
+    maxHeapSize = '1G'
+    doFirst { applyE2ESystemProperties(delegate as Test) }
+    testLogging {
+        events 'failed', 'skipped'
+        exceptionFormat 'full'
+        showStackTraces true
+    }
+}
+
+// One report for both suites: execute the backend suite, then the frontend suite with
+// `ignoreFailures`, and only fail the report task after the HTML report has been generated.
+// Test results of both runs share `e2e/build/allure-results`.
+def backendTest = tasks.named('testBackend', Test)
+def frontendTest = tasks.named('testFrontend', Test)
+frontendTest.configure {
+    mustRunAfter backendTest
+    ignoreFailures = true
+}
+
+tasks.register('e2eAllureReport') {
+    group = 'verification'
+    description = 'Runs backend + frontend E2E (always trying both) and generates one Allure report.'
+    dependsOn backendTest, frontendTest
+
+    def reportDir = allureReportDir
+    inputs.dir(allureResultsDir)
+    outputs.dir(reportDir)
+
+    doLast {
+        def results = allureResultsDir.get().asFile
+        def report = reportDir.get().asFile
+        if (!results.isDirectory() || (results.listFiles() ?: []).length == 0) {
+            throw new GradleException("No Allure results found in ${results}. Run :e2e:testBackend / :e2e:testFrontend first.")
+        }
+        project.delete(report)
+        def allureHome = configurations.allureCli.singleFile
+        project.javaexec {
+            classpath = configurations.allureCli
+            mainClass = 'io.qameta.allure.CommandLine'
+            args 'generate', results.absolutePath, '--clean', '-o', report.absolutePath
+        }
+        logger.lifecycle("Allure report: ${new File(report, 'index.html')}")
+        logger.lifecycle("Allure CLI: ${allureHome.name}")
+        if (frontendTest.get().state.failure != null) {
+            throw new GradleException("Frontend E2E failed (see Allure report: ${new File(report, 'index.html')}): "
+                    + frontendTest.get().state.failure.message)
+        }
+    }
+}
+
+tasks.register('playwrightInstall') {
+    group = 'verification'
+    description = 'Installs the Chromium build supported by the pinned Playwright Java version.'
+    def cp = sourceSets.test.runtimeClasspath
+    def javaBin = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }.get().executablePath.asFile.absolutePath
+    outputs.upToDateWhen { false }
+    doLast {
+        exec {
+            commandLine javaBin, '-cp', cp.asPath, 'com.microsoft.playwright.CLI', 'install', 'chromium'
+        }
+    }
+}
+
+tasks.register('e2eCheck') {
+    group = 'verification'
+    description = 'Compiles E2E sources only (no test execution, no instance, no browser).'
+    dependsOn tasks.named('testClasses')
+}

@@ -327,3 +327,21 @@ spotless {
         prettier().config(['tabWidth': 2, 'printWidth': 120])
     }
 }
+
+// ---------------------------------------------------------------------------
+// E2E hook (consumed by the isolated `:e2e` test project only).
+// Resolves the runtime classpath of this application so that E2E tests can start
+// the current working tree outside of Gradle, without pulling E2E code or
+// dependencies into the application module or its packaged artifacts.
+// ---------------------------------------------------------------------------
+tasks.register('writeE2eRuntimeClasspath') {
+    group = 'verification'
+    description = 'Writes the runtime classpath of the application for the :e2e test project.'
+    def classpathFile = layout.buildDirectory.file('e2e-runtime-classpath.txt')
+    def runtimeClasspath = sourceSets.main.runtimeClasspath
+    outputs.file(classpathFile)
+    doLast {
+        classpathFile.get().asFile.parentFile.mkdirs()
+        classpathFile.get().asFile.text = runtimeClasspath.files.collect { it.absolutePath }.join(System.lineSeparator())
+    }
+}

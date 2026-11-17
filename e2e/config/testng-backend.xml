@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+<suite name="Halo Backend E2E" verbose="1" parallel="false">
+    <test name="Backend HTTP main flows">
+        <classes>
+            <class name="run.halo.e2e.backend.PostLifecycleE2ETest"/>
+            <class name="run.halo.e2e.backend.AuthenticationE2ETest"/>
+        </classes>
+    </test>
+</suite>

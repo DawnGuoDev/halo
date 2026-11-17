@@ -101,3 +101,9 @@ coverage
 storybook-static
 tsconfig.tsbuildinfo
 .tgz
+
+### E2E (e2e/ subproject)
+e2e/build/
+e2e/allure-results/
+e2e/allure-report/
+application/build/e2e-runtime-classpath.txt
