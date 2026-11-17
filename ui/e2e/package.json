@@ -1,0 +1,19 @@
+{
+  "name": "@halo-dev/e2e",
+  "private": true,
+  "type": "module",
+  "description": "Browser and API end-to-end tests for the Halo console. Runs against a real Halo instance started by the harness.",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "prepare:halo": "node scripts/prepare-halo.mjs",
+    "test": "playwright test",
+    "test:api": "playwright test --project=api",
+    "test:ui": "playwright test --project=ui",
+    "report": "playwright show-report build/report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^22.10.0",
+    "typescript": "^5.9.0"
+  }
+}
