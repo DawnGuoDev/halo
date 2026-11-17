@@ -156,6 +156,12 @@ tasks.register('e2eAllureReport') {
     }
 }
 
+tasks.register('testE2e') {
+    group = 'verification'
+    description = 'Runs both E2E suites and generates one Allure report (alias of e2eAllureReport).'
+    dependsOn tasks.named('e2eAllureReport')
+}
+
 tasks.register('playwrightInstall') {
     group = 'verification'
     description = 'Installs the Chromium build supported by the pinned Playwright Java version.'
