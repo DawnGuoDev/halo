@@ -125,6 +125,7 @@
   "core.post.filters.sort.items.last_modify_time_asc": "较早更新",
   "core.post.list.fields.categories": "分类：",
   "core.post.list.fields.visits": "访问量 {visits}",
+  "core.post.list.fields.views": "访问量",
   "core.post.list.fields.comments": "评论 {comments}",
   "core.post.list.fields.pinned": "已置顶",
   "core.post.list.fields.schedule_publish.tooltip": "定时发布",

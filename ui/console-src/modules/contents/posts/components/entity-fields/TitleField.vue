@@ -99,13 +99,6 @@ const commentText = computed(() => {
               {{ category.spec.displayName }}
             </a>
           </p>
-          <span class="text-xs text-gray-500">
-            {{
-              $t("core.post.list.fields.visits", {
-                visits: post.stats.visit,
-              })
-            }}
-          </span>
           <span
             class="cursor-pointer text-xs text-gray-500 hover:text-gray-900 hover:underline"
             @click="commentListVisible = true"
