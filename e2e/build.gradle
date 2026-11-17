@@ -43,6 +43,9 @@ repositories {
 
 configurations {
     allureCli
+    // Allure records @Step methods through AspectJ load-time weaving. Keep the weaver in a
+    // dedicated configuration so it is attached only to the E2E test JVMs.
+    allureAgent
 }
 
 dependencies {
@@ -51,14 +54,30 @@ dependencies {
     testImplementation "com.microsoft.playwright:playwright:${playwrightVersion}"
     // JSON contract parsing for backend/UI assertions; test scope only.
     testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.21.1'
+    // Serves the built console plus a same-origin proxy for the browser suite, mirroring the
+    // reverse proxy layout of a deployment (static entry HTML + API/session pass-through).
+    // Test scope only.
+    testImplementation 'org.eclipse.jetty.ee10:jetty-ee10-servlet:12.1.1'
+    testImplementation "io.qameta.allure:allure-java-commons:${allureVersion}"
+    allureAgent "org.aspectj:aspectjweaver:1.9.24"
 
     allureCli "io.qameta.allure:allure-commandline:${allureVersion}"
 }
 
 def applyE2ESystemProperties = { Test task ->
+    def agent = configurations.allureAgent.asPath
+    task.jvmArgs "-javaagent:${agent}"
+
     task.systemProperty 'allure.results.directory', allureResultsDir.get().asFile.absolutePath
     task.systemProperty 'e2e.frontend.screenshot.dir', e2eScreenshotsDir.get().asFile.absolutePath
     task.systemProperty 'e2e.temp.dir', e2eTempDir.get().asFile.absolutePath
+    // Gradle does not forward -D properties to the forked test JVM. Forward the documented E2E
+    // overrides explicitly (e.g. -De2e.ready.timeout.seconds / -De2e.chromium.executable).
+    System.getProperties().each { key, value ->
+        if (key.toString().startsWith('e2e.')) {
+            task.systemProperty key.toString(), value.toString()
+        }
+    }
 }
 
 // The instance must run the current working tree: application classes plus the resolved
@@ -117,6 +136,12 @@ frontendTest.configure {
     ignoreFailures = true
 }
 
+// One results directory per run: the backend suite starts it, the frontend suite appends to it.
+// A stale result from an older run must never leak into the current report.
+backendTest.configure {
+    doFirst { project.delete(allureResultsDir) }
+}
+
 tasks.register('e2eAllureReport') {
     group = 'verification'
     description = 'Runs backend + frontend E2E (always trying both) and generates one Allure report.'
@@ -169,7 +194,8 @@ tasks.register('playwrightInstall') {
     def javaBin = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(21) }.get().executablePath.asFile.absolutePath
     outputs.upToDateWhen { false }
     doLast {
-        exec {
+        // Task.exec() was removed in Gradle 9; use the public ExecOperations service instead.
+        project.services.get(org.gradle.process.ExecOperations).exec {
             commandLine javaBin, '-cp', cp.asPath, 'com.microsoft.playwright.CLI', 'install', 'chromium'
         }
     }

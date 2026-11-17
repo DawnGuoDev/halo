@@ -1,5 +1,7 @@
 package run.halo.e2e.frontend;
 
+import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.microsoft.playwright.Locator;
 import com.microsoft.playwright.Page;
@@ -25,7 +27,7 @@ import run.halo.e2e.support.HaloInstance;
 import run.halo.e2e.support.UniqueScope;
 
 /**
- * TC-FE-001: unauthenticated redirect -&gt; real form login -&gt; new post -&gt; publish -&gt; list.
+ * TC-FE-001: real form login against an uninitialized session -&gt; new post -&gt; publish -&gt; list.
  *
  * <p>Assertions only use URL, role, visible text and the post list API for the published state.
  * Post data is created with a unique scope token and removed through the API at the end.
@@ -52,7 +54,7 @@ public class ConsolePostE2ETest {
         }
         api = HaloApiClient.basic(instance);
         Assertions.assertStatus(api.setupSystem(), 204);
-        browser = BrowserSession.launch(instance.baseUrl());
+        browser = BrowserSession.launch(instance.consoleUrl());
     }
 
     @AfterMethod(alwaysRun = true)
@@ -83,27 +85,24 @@ public class ConsolePostE2ETest {
         }
     }
 
-    @Test(description = "TC-FE-001 未登录重定向 → 登录 → 新建文章 → 发布 → 列表校验")
+    @Test(description = "TC-FE-001 未登录会话 → 真实表单登录 → 新建文章 → 发布 → 列表校验")
     @Story("TC-FE-001")
     @Severity(SeverityLevel.BLOCKER)
     @Description("""
-            1. Playwright 打开 /console，最终落在 /login 且登录表单可见
+            1. 未登录会话打开 /login，登录表单可见且账号输入为空
             2. 使用临时实例账号在真实表单中登录并进入控制台
             3. 打开 /console/posts，新建文章并填写唯一标题与正文
             4. 点击发布并在设置弹窗确认，列表出现该文章且 API 显示已发布
             5. 结束通过 API 删除创建的文章
             """)
     public void shouldLoginCreateAndPublishPost() {
-        var console = new ConsolePageObject(browser.page());
+        var console = new ConsolePageObject(browser.page(), instance.consoleUrl());
         var page = browser.page();
         var title = scope.title("console post");
         var body = "E2E console content " + scope.token();
 
         try {
-            expectRedirectToLogin(page, console);
-            console.login().login(E2EConfig.ADMIN_USERNAME, E2EConfig.ADMIN_PASSWORD);
-            page.waitForURL(
-                    url -> !url.contains("/login"), new Page.WaitForURLOptions().setTimeout(30_000));
+            loginThroughConsole(page, console);
 
             openPostsAndStartNewPost(console);
             fillAndPublish(console, title, body);
@@ -115,11 +114,18 @@ public class ConsolePostE2ETest {
         }
     }
 
-    @Step("未登录访问 /console 被重定向到 /login")
-    private void expectRedirectToLogin(Page page, ConsolePageObject console) {
-        page.navigate("/console");
+    @Step("使用真实表单登录，并确认会话离开登录页")
+    private void loginThroughConsole(Page page, ConsolePageObject console) {
+        // An unauthenticated session resolves to the server-rendered login form. Loading /login
+        // directly is the stable entry after setup; on success Halo redirects to the user center,
+        // while the article list is opened explicitly in the next step.
+        page.navigate("/login");
         console.login().expectLoaded();
         Assert.assertTrue(console.login().usernameValue().isEmpty(), "Login form must start empty");
+        console.login().login(E2EConfig.ADMIN_USERNAME, E2EConfig.ADMIN_PASSWORD);
+        page.waitForURL(
+                url -> !url.contains("/login"), new Page.WaitForURLOptions().setTimeout(30_000));
+        assertThat(page.locator("#username")).hasCount(0);
     }
 
     @Step("进入文章列表并打开新建文章编辑器")

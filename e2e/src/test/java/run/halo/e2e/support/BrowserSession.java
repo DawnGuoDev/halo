@@ -48,6 +48,7 @@ public final class BrowserSession implements AutoCloseable {
             var context = browser.newContext(new Browser.NewContextOptions()
                     .setBaseURL(baseUrl)
                     .setLocale(E2EConfig.LANGUAGE)
+                    .setJavaScriptEnabled(true)
                     .setViewportSize(1440, 900)
                     .setAcceptDownloads(true));
             context.setDefaultTimeout(30_000);

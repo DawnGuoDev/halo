@@ -6,7 +6,7 @@
 |   层级   |                框架                |                    覆盖内容                    |         用例          |
 |--------|----------------------------------|--------------------------------------------|---------------------|
 | 后端 E2E | TestNG + JDK `HttpClient`，直连真实实例 | 系统初始化、Basic Auth、文章创建/查询/更新/发布/删除、401 失败路径 | TC-BE-001、TC-BE-002 |
-| 前端 E2E | Playwright Java + Chromium       | `/console` 未登录重定向、真实表单登录、新建文章、发布、列表校验      | TC-FE-001           |
+| 前端 E2E | Playwright Java + Chromium       | 未登录会话真实表单登录、新建文章、发布、列表校验                   | TC-FE-001           |
 | 报告     | Allure（`allure-testng`）          | 两类套件同一份结果目录、单份 HTML 报告、步骤、耗时、失败附件          | TC-REPORT-001       |
 
 ## 1. 环境准备
@@ -24,24 +24,27 @@
 ./gradlew :e2e:testFrontend -De2e.chromium.executable=/path/to/chrome
 ```
 
-网络受限时可以把浏览器缓存目录（`~/.cache/ms-playwright`）预先打包到执行环境。若未安装浏览器，
-`TC-FE-001` 会以 **BLOCKED** 结束并提示安装命令，不会被记为业务失败。
+网络受限时可以把浏览器缓存目录（`~/.cache/ms-playwright`）预先打包到执行环境，或通过
+`PLAYWRIGHT_DOWNLOAD_HOST` 指向镜像（例如 `https://cdn.npmmirror.com/binaries/playwright`）。
+若未安装浏览器，`TC-FE-001` 会以 **BLOCKED** 结束并提示安装命令，不会被记为业务失败。
 
 ## 2. 被测实例与数据准备
 
 每个测试方法都会自启动一个临时 Halo 实例（当前工作区代码，不使用已发布镜像）：
 
-|  项   |                                   说明                                   |
-|------|------------------------------------------------------------------------|
-| 端口   | 每次随机空闲端口                                                               |
-| 数据库  | H2 内存库（`r2dbc:h2:mem:///halo-e2e-<port>;MODE=MySQL;DB_CLOSE_DELAY=-1`） |
-| 工作目录 | `e2e/build/e2e-tmp/halo-<port>-<nanos>/`，测试结束删除；失败时保留用于排查              |
-| 就绪信号 | 轮询 `/actuator/health` 为 `UP`，超时（默认 180s）记为 BLOCKED 并输出启动日志             |
-| 管理员  | 固定测试账号 `e2e-admin` / `E2eAdmin.1234`（仅临时实例使用，不写入报告）                    |
-| 数据隔离 | 每轮生成唯一 scope token（`e2e-<UTC 时间戳>-<随机串>`）作为标题/ slug 前缀                 |
-| 清理   | 用例通过 API 删除创建的文章；实例停止后删除临时工作目录；清理失败会在报告中显式标记                           |
+|  项   |                                                                                   说明                                                                                   |
+|------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 端口   | 每次随机空闲端口：Halo 进程一个，前端同源代理一个                                                                                                                                            |
+| 数据库  | H2 内存库（`r2dbc:h2:mem:///halo-e2e-<port>;MODE=MySQL;DB_CLOSE_DELAY=-1`）                                                                                                 |
+| 工作目录 | `e2e/build/e2e-tmp/halo-<port>-<nanos>/`，测试结束删除；失败时保留用于排查                                                                                                              |
+| 就绪信号 | 轮询 `/actuator/health` 为 `UP`，超时（默认 180s）记为 BLOCKED 并输出启动日志                                                                                                             |
+| 前端入口 | 测试内启动同源静态代理：`/console`、`/uc` 返回 `ui/build/dist/ui/*.html`，`/ui-assets/**` 直接读静态文件，其余路径（`/apis/**`、`/login`、触发重定向的 API 等）透传到 Halo 进程，等价于部署环境反代；会话 Cookie 因此始终在同一 origin |
+| 管理员  | 固定测试账号 `e2e-admin` / `E2eAdmin.1234`（仅临时实例使用，不写入报告）                                                                                                                    |
+| 数据隔离 | 每轮生成唯一 scope token（`e2e-<UTC 时间戳>-<随机串>`）作为标题/ slug 前缀                                                                                                                 |
+| 清理   | 用例通过 API 删除创建的文章；实例停止后删除临时工作目录；清理失败会在报告中显式标记                                                                                                                           |
 
-可用配置（系统属性或环境变量均可，如 `-De2e.ready.timeout.seconds=240` / `E2E_READY_TIMEOUT_SECONDS=240`）：
+可用配置（系统属性或环境变量均可，如 `-De2e.ready.timeout.seconds=240` / `E2E_READY_TIMEOUT_SECONDS=240`；
+E2E 任务会把命令行里的 `-De2e.*` 转发给 fork 的测试 JVM）：
 
 |              属性               |           默认值           |           作用            |
 |-------------------------------|-------------------------|-------------------------|
@@ -79,6 +82,12 @@
 `application:writeE2eRuntimeClasspath`，以便用当前工作树启动实例；`./gradlew build` /
 `./gradlew check` 不会触发它们。
 
+前端套件还要求 `ui/build/dist/ui/` 已构建（`./gradlew :ui:doBuild`，构建过程依赖已有
+`pnpm install` 与仓库锁文件）。缺失时前端用例在 begin 阶段以 BLOCKED 结束并给出该命令。
+
+每次 `:e2e:testBackend` 开始会清空 `e2e/build/allure-results/`；`e2eAllureReport` 先跑后端、
+再跑前端，3 条用例（TC-BE-001、TC-BE-002、TC-FE-001）写入同一结果目录，不会混入历史运行结果。
+
 ## 4. 报告查看
 
 |         产物          |                            路径                            |
@@ -91,7 +100,9 @@
 `e2eAllureReport` 使用固定版本 Allure CLI（`allure-commandline`，仅作为独立配置）生成静态报告，
 无需额外安装 Allure。也可以直接打开 `index.html`，或用 `allure open e2e/build/reports/allure-report`（如本地已装 Allure）。
 
-报告内容：用例名称与状态、开始/结束时间、耗时、步骤（含请求/响应摘要或 UI 步骤）、失败堆栈；
+`@Step` 需通过 AspectJ 织入才会进入报告：E2E 任务会为测试 JVM 添加测试作用域的
+`aspectjweaver`（`allureAgent` 配置），不会影响应用运行时。报告内容：用例名称与状态、开始/结束时间、
+耗时、步骤（含请求/响应摘要或 UI 步骤）、失败堆栈；
 后端失败附加脱敏后的请求/响应，前端失败附加全页截图与页面 URL/标题。
 `allure-results`、报告、截图和临时目录都在 `.gitignore` 中，不提交。
 
@@ -114,14 +125,14 @@
 
 ## 6. 需求 ↔ 用例覆盖矩阵
 
-|             需求 / 验收项             |                       用例 ID                       |                                           覆盖内容                                            |
-|----------------------------------|---------------------------------------------------|-------------------------------------------------------------------------------------------|
-| REQ-002 后端主链路（AC1）               | TC-BE-001 `PostLifecycleE2ETest`                  | 初始化（204 / 已初始化 302）→ Basic Auth 身份 → 草稿创建（201）→ 单条与列表查询 → 更新标题并发布 → 已发布校验 → 删除后 404 与列表不含 |
-| REQ-002 失败路径                     | TC-BE-002 `AuthenticationE2ETest`                 | 未认证访问 `/apis/**` 返回 401、错误密码 401、正确凭据对照 200                                               |
-| REQ-003 控制台主流程（AC2）              | TC-FE-001 `ConsolePostE2ETest`                    | `/console` 未登录重定向 `/login` → 真实表单登录 → 新建文章 → 发布（含设置弹窗分支）→ 列表出现且 API 显示已发布 → API 清理        |
-| REQ-004 统一报告（AC3）                | `e2eAllureReport`                                 | 两类结果进入 `e2e/build/allure-results`，单份报告含状态/耗时/失败信息/截图                                      |
-| REQ-005 数据准备与清理（AC4）             | 所有用例                                              | 唯一 scope token、独立内存库与工作目录、API 清理、清理失败显式标记                                                 |
-| REQ-001 / REQ-007 隔离与回归（AC5、AC8） | `e2e/build.gradle`、`settings.gradle`、`.gitignore` | 独立子项目、仅测试作用域依赖、不挂 `check`、不改业务代码与 CI                                                      |
+|             需求 / 验收项             |                       用例 ID                       |                                                     覆盖内容                                                     |
+|----------------------------------|---------------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| REQ-002 后端主链路（AC1）               | TC-BE-001 `PostLifecycleE2ETest`                  | 初始化（204 / 已初始化 302）→ Basic Auth 身份 → 草稿创建（201）→ 单条与列表查询 → 更新标题并发布 → 已发布校验 → 删除后 404 与列表不含                    |
+| REQ-002 失败路径                     | TC-BE-002 `AuthenticationE2ETest`                 | 未认证访问 `/apis/**` 返回 401、错误密码 401、正确凭据对照 200                                                                  |
+| REQ-003 控制台主流程（AC2）              | TC-FE-001 `ConsolePostE2ETest`                    | 未登录会话打开 `/login`（账号输入为空）→ 真实表单登录（`#plainPassword`，页面自身 RSA 加密）→ 新建文章 → 发布（含设置弹窗分支）→ 列表出现且 API 显示已发布 → API 清理 |
+| REQ-004 统一报告（AC3）                | `e2eAllureReport`                                 | 两类结果进入 `e2e/build/allure-results`，单份报告含状态/耗时/失败信息/截图                                                         |
+| REQ-005 数据准备与清理（AC4）             | 所有用例                                              | 唯一 scope token、独立内存库与工作目录、API 清理、清理失败显式标记                                                                    |
+| REQ-001 / REQ-007 隔离与回归（AC5、AC8） | `e2e/build.gradle`、`settings.gradle`、`.gitignore` | 独立子项目、仅测试作用域依赖、不挂 `check`、不改业务代码与 CI                                                                         |
 
 非 E2E 覆盖项：富文本全部格式、主题渲染细节、插件生命周期与市场、OAuth2/2FA、邮件/短信、对象存储、
 性能/压测、视觉回归、无障碍专项、多浏览器矩阵。
@@ -129,6 +140,8 @@
 ## 7. 已知限制
 
 - 前端用例以 Chromium 单浏览器、`zh-CN` 文案为准；其他语言需覆盖 Page Object 中的文案，暂不在本期范围。
+- 控制台登录使用服务端渲染的 `/login` 表单（真实用户入口）；登录成功后 Halo 默认跳转 `/uc`，用例随后显式打开 `/console/posts`。未登录浏览器直接打开 `/console` 时，控制台 shell 可能在匿名用户查询完成前短暂渲染，因此“是否立刻重定向”不作为断言点。
+- 浏览器套件通过测试内同源代理读取 `ui/build/dist/ui/`，不修改 Halo 生产静态资源行为；代理只在测试进程内存在。
 - 控制台编辑器为第三方富文本组件，正文输入使用 `[contenteditable=true]` 契约；断言以标题、列表与 API 状态为准。
 - 发布校验不依赖前台主题渲染（Q4 结论：本期仅控制台状态 + API 已发布）。
 - 默认不修改 `.github/workflows`，CI 接入、报告归档保留策略由后续需求决定。

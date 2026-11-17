@@ -15,8 +15,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.Set;
 import java.util.stream.Stream;
+import org.eclipse.jetty.ee10.servlet.DefaultServlet;
+import org.eclipse.jetty.ee10.servlet.ServletContextHandler;
+import org.eclipse.jetty.ee10.servlet.ServletHolder;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.util.resource.ResourceFactory;
 
 /**
  * A real Halo process started from the current working tree (boot classpath of the {@code
@@ -34,13 +40,16 @@ public final class HaloInstance implements AutoCloseable {
     private static final Duration HEALTH_REQUEST_TIMEOUT = Duration.ofSeconds(10);
 
     private final int port;
+    private final int consolePort;
     private final Path workDir;
     private final Path logFile;
     private final List<String> classpath;
     private Process process;
+    private Server staticServer;
 
-    private HaloInstance(int port, Path workDir) {
+    private HaloInstance(int port, int consolePort, Path workDir) {
         this.port = port;
+        this.consolePort = consolePort;
         this.workDir = workDir;
         this.logFile = workDir.resolve("logs").resolve("instance.log");
         this.classpath = resolveClasspath();
@@ -49,12 +58,21 @@ public final class HaloInstance implements AutoCloseable {
     /** Creates an instance using a random port and a fresh temporary directory. */
     public static HaloInstance create() {
         var port = findFreePort();
+        var consolePort = findFreePort();
         var dir = E2EConfig.TEMP_DIR.resolve("halo-" + port + "-" + System.nanoTime());
-        return new HaloInstance(port, dir);
+        return new HaloInstance(port, consolePort, dir);
     }
 
     public String baseUrl() {
         return "http://127.0.0.1:" + port;
+    }
+
+    /**
+     * Frontend entry: a same-origin test proxy that serves the built console and passes API/session
+     * requests to this instance, mirroring the reverse proxy in front of a deployment.
+     */
+    public String consoleUrl() {
+        return "http://127.0.0.1:" + consolePort;
     }
 
     /** Creates an unauthenticated HTTP client with a bounded connect timeout. */
@@ -148,6 +166,7 @@ public final class HaloInstance implements AutoCloseable {
                     .start();
             this.process = log;
             awaitHealthy();
+            startConsoleOrigin();
             return this;
         } catch (BackendReadinessException e) {
             stop();
@@ -161,8 +180,10 @@ public final class HaloInstance implements AutoCloseable {
 
     private void awaitHealthy() {
         var client = newHttpClient();
+        var healthUrl = System.getProperty("e2e.health.url");
+        var health = URI.create(
+                healthUrl == null || healthUrl.isBlank() ? baseUrl() + "/actuator/health" : healthUrl);
         var deadline = System.nanoTime() + Duration.ofSeconds(E2EConfig.READY_TIMEOUT_SECONDS).toNanos();
-        var health = URI.create(baseUrl() + "/actuator/health");
         String lastStatus = "not requested";
         while (System.nanoTime() < deadline) {
             if (process != null && !process.isAlive()) {
@@ -194,14 +215,170 @@ public final class HaloInstance implements AutoCloseable {
                 null);
     }
 
+    /**
+     * Starts the same-origin test proxy for the built console.
+     *
+     * <p>This helper is test infrastructure only: it reproduces the reverse-proxy layout of a
+     * deployment (static entry HTML plus API/session pass-through) so Playwright exercises the real
+     * browser application against the real Halo process.
+     */
+    private static final class ConsoleProxyServlet extends org.eclipse.jetty.ee10.servlet.DefaultServlet {
+
+        private static final Pattern CONSOLE_ROUTE = Pattern.compile("^/console(?:/.*)?$");
+        private static final Pattern STATIC_ASSET = Pattern.compile("^/(ui-assets|images|webjars)/.*");
+        private static final String CONSOLE_ENTRY = "/console.html";
+        private static final String UC_ENTRY = "/uc.html";
+
+        private final String haloBaseUrl;
+        private final java.net.http.HttpClient http = java.net.http.HttpClient.newBuilder()
+                .version(java.net.http.HttpClient.Version.HTTP_1_1)
+                .connectTimeout(Duration.ofSeconds(10))
+                .followRedirects(java.net.http.HttpClient.Redirect.NEVER)
+                .build();
+
+        private ConsoleProxyServlet(String haloBaseUrl) {
+            this.haloBaseUrl = haloBaseUrl;
+        }
+
+        @Override
+        protected void service(
+                jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response)
+                throws IOException, jakarta.servlet.ServletException {
+            var path = request.getRequestURI();
+            if (CONSOLE_ROUTE.matcher(path).matches()) {
+                write(distEntry(CONSOLE_ENTRY), response);
+                return;
+            }
+            if (path.equals("/uc") || path.startsWith("/uc/")) {
+                write(distEntry(UC_ENTRY), response);
+                return;
+            }
+            if (path.startsWith("/webjars/")) {
+                proxy(request, response, path);
+                return;
+            }
+            if (STATIC_ASSET.matcher(path).matches()
+                    || path.equals("/favicon.ico")
+                    || path.equals("/favicon.svg")
+                    || path.endsWith(".js")
+                    || path.endsWith(".css")
+                    || path.endsWith(".map")
+                    || path.endsWith(".json")) {
+                super.service(request, response);
+                return;
+            }
+            proxy(request, response, path);
+        }
+
+        private void write(Path entry, jakarta.servlet.http.HttpServletResponse response) throws IOException {
+            var bytes = Files.readAllBytes(entry);
+            response.setStatus(200);
+            response.setContentType("text/html;charset=UTF-8");
+            response.setContentLength(bytes.length);
+            response.getOutputStream().write(bytes);
+        }
+
+        private static Path distEntry(String file) {
+            var base = Path.of("../ui/build/dist/ui").toAbsolutePath().normalize();
+            var entry = base.resolve(file.substring(1)).normalize();
+            if (Files.isRegularFile(entry)) {
+                return entry;
+            }
+            throw new IllegalStateException("Console entry missing: " + entry);
+        }
+
+        /** Passes API/session/front-site requests to Halo and forwards cookies and responses as-is. */
+        private void proxy(
+                jakarta.servlet.http.HttpServletRequest request, jakarta.servlet.http.HttpServletResponse response,
+                String path)
+                throws IOException {
+            var target = URI.create(haloBaseUrl + path
+                    + (request.getQueryString() == null ? "" : "?" + request.getQueryString()));
+            var body = request.getInputStream().readAllBytes();
+            var builder = java.net.http.HttpRequest.newBuilder(target)
+                    .timeout(Duration.ofSeconds(60))
+                    .method(request.getMethod(), body.length == 0
+                            ? java.net.http.HttpRequest.BodyPublishers.noBody()
+                            : java.net.http.HttpRequest.BodyPublishers.ofByteArray(body));
+            copyHeader(request, builder, "Content-Type");
+            copyHeader(request, builder, "Authorization");
+            copyHeader(request, builder, "Cookie");
+            copyHeader(request, builder, "Accept");
+            copyHeader(request, builder, "X-Requested-With");
+            copyHeader(request, builder, "X-CSRF-TOKEN");
+            try {
+                var upstream = http.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofByteArray());
+                response.setStatus(upstream.statusCode());
+                upstream.headers().map().forEach((name, values) -> {
+                    if (!name.equalsIgnoreCase("transfer-encoding")
+                            && !name.equalsIgnoreCase("content-length")
+                            && !name.equalsIgnoreCase("connection")) {
+                        values.forEach(value -> response.addHeader(name, value));
+                    }
+                });
+                var responseBody = upstream.body();
+                response.setContentLength(responseBody.length);
+                response.getOutputStream().write(responseBody);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                response.sendError(502, "Interrupted while proxying to Halo");
+            }
+        }
+
+        private static void copyHeader(
+                jakarta.servlet.http.HttpServletRequest request, java.net.http.HttpRequest.Builder builder,
+                String name) {
+            var value = request.getHeader(name);
+            if (value != null) {
+                builder.header(name, value);
+            }
+        }
+    }
+
     /** Stops the instance and removes the temporary work directory if no failure context is kept. */
     @Override
     public void close() {
         stop();
     }
 
+    private void startConsoleOrigin() {
+        var dist = Path.of("../ui/build/dist/ui");
+        if (!Files.isDirectory(dist)) {
+            throw new BackendReadinessException(
+                    "Console dist is missing at " + dist.toAbsolutePath()
+                            + ". Run `./gradlew :ui:doBuild` before the frontend E2E suite.",
+                    null);
+        }
+        try {
+            var server = new Server(consolePort);
+            var handler = new ServletContextHandler();
+            handler.setContextPath("/");
+            handler.setBaseResource(ResourceFactory.of(handler).newResource(dist.toAbsolutePath().toUri()));
+            handler.setWelcomeFiles(new String[] {"console.html"});
+            // Same-origin proxy: static console assets and SPA entries are served locally, while
+            // every other path (APIs, login form, front site) is forwarded to the Halo instance,
+            // like a reverse proxy in front of a deployment. Session cookies stay on one origin.
+            handler.addServlet(
+                    new ServletHolder((jakarta.servlet.http.HttpServlet) new ConsoleProxyServlet(baseUrl())), "/*");
+            server.setHandler(handler);
+            server.start();
+            this.staticServer = server;
+        } catch (Exception e) {
+            throw new BackendReadinessException("Cannot start console static server: " + e, e);
+        }
+    }
+
     /** Stops the instance; work dir is kept so that failure diagnostics remain available. */
     public void stop() {
+        if (staticServer != null) {
+            try {
+                staticServer.stop();
+            } catch (Exception e) {
+                // The command exit code is the primary signal; a stuck static server is reported by
+                // the health check of the next run (port is random).
+            }
+            staticServer = null;
+        }
         if (process != null) {
             process.descendants().forEach(ProcessHandle::destroy);
             process.destroy();

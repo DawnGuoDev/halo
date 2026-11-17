@@ -11,25 +11,29 @@ import io.qameta.allure.Step;
 public final class PostListPage {
 
     private final Page page;
+    private final String baseUrl;
 
-    public PostListPage(Page page) {
+    public PostListPage(Page page, String baseUrl) {
         this.page = page;
+        this.baseUrl = baseUrl;
     }
 
     @Step("打开控制台文章列表 /console/posts")
     public PostListPage open() {
-        page.navigate("/console/posts");
+        page.navigate(baseUrl + "/console/posts");
         page.waitForURL(url -> url.contains("/console/posts"), new Page.WaitForURLOptions().setTimeout(30_000));
         return this;
     }
 
     @Step("点击新建文章")
     public void clickNewPost() {
-        // English UI ("New") and Chinese UI ("新建") are both supported.
+        // English UI ("New") and Chinese UI ("新建") are both supported. The label also carries a
+        // shortcut suffix (e.g. "新建 (N)"), so match it, but never the surrounding wrapper element.
         page.getByRole(
                         AriaRole.BUTTON,
-                        new Page.GetByRoleOptions().setName(java.util.regex.Pattern.compile("^(New|新建)$")))
-                .first()
+                        new Page.GetByRoleOptions()
+                                .setName(java.util.regex.Pattern.compile("^(New|新建)(\\s*\\(.*\\))?$"))
+                                .setExact(false))
                 .first()
                 .click();
     }

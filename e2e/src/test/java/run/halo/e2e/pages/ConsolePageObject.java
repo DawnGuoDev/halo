@@ -8,9 +8,13 @@ public final class ConsolePageObject {
     private final LoginPage login;
     private final PostListPage posts;
 
-    public ConsolePageObject(Page page) {
+    /**
+     * @param baseUrl the temporary Halo origin (console proxy) for absolute navigation; relative
+     *     navigation does not rely on the browser-context baseURL.
+     */
+    public ConsolePageObject(Page page, String baseUrl) {
         this.login = new LoginPage(page);
-        this.posts = new PostListPage(page);
+        this.posts = new PostListPage(page, baseUrl);
     }
 
     public LoginPage login() {

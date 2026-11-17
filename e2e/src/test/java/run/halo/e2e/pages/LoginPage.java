@@ -9,8 +9,9 @@ import io.qameta.allure.Step;
 
 /**
  * Login page ({@code /login}). Selectors follow the form semantics: the username input keeps the
- * server-rendered {@code #username} id, the password input is matched by its autocomplete contract,
- * and the submit button by its visible label.
+ * server-rendered {@code #username} id, the visible plain-password field is {@code #plainPassword}
+ * (the page encrypts it into the hidden {@code #password} field on submit), and the submit button is
+ * matched by its visible label.
  */
 public final class LoginPage {
 
@@ -42,8 +43,12 @@ public final class LoginPage {
         return page.locator("#username").inputValue();
     }
 
+    /**
+     * The login form keeps the plain password in {@code #plainPassword} and submits the encrypted
+     * value through the hidden {@code #password} field (see login_local.html / common.html). Fill
+     * the visible field so the page's own submit handler performs the encryption.
+     */
     private Locator passwordInput() {
-        return page.locator(
-                "input[type=password], input[autocomplete=current-password], input[autocomplete=password]");
+        return page.locator("#plainPassword, input[autocomplete=current-password], input[type=password]").first();
     }
 }
