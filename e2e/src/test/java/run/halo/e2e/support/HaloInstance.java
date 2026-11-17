@@ -133,6 +133,8 @@ public final class HaloInstance implements AutoCloseable {
         command.add("run.halo.app.Application");
         command.add("--server.port=" + port);
         command.add("--spring.r2dbc.url=r2dbc:h2:mem:///halo-e2e-" + port + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
+        // Basic Auth is disabled by default; E2E backend calls rely on it.
+        command.add("--halo.security.basic-auth.disabled=false");
         command.add("--halo.work-dir=" + workDir.toAbsolutePath());
         command.add("--spring.main.banner-mode=off");
         command.add("--logging.file.name=" + logFile.toAbsolutePath());

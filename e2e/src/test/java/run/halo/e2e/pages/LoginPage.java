@@ -25,7 +25,7 @@ public final class LoginPage {
         page.waitForURL(url -> url.contains("/login"), new Page.WaitForURLOptions().setTimeout(30_000));
         assertThat(page.locator("#username")).isVisible();
         assertThat(passwordInput()).isVisible();
-        assertThat(page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("登录")))
+        assertThat(page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(java.util.regex.Pattern.compile("^(Sign in|Log in|登录)$"))))
                 .isVisible();
         return this;
     }
@@ -34,7 +34,7 @@ public final class LoginPage {
     public void login(String username, String password) {
         page.locator("#username").fill(username);
         passwordInput().fill(password);
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("登录"))
+        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName(java.util.regex.Pattern.compile("^(Sign in|Log in|登录)$")))
                 .click();
     }
 

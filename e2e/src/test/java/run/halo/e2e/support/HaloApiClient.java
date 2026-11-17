@@ -42,16 +42,25 @@ public final class HaloApiClient {
     }
 
     public RichResponse setupSystem() {
-        var body = json.createObjectNode();
-        body.put("username", E2EConfig.ADMIN_USERNAME);
-        body.put("password", E2EConfig.ADMIN_PASSWORD);
-        body.put("email", E2EConfig.ADMIN_EMAIL);
-        body.put("siteTitle", E2EConfig.SITE_TITLE);
-        body.put("language", E2EConfig.LANGUAGE);
-        body.put("externalUrl", baseUrl);
-        return send("POST /system/setup", request("/system/setup")
-                .POST(HttpRequest.BodyPublishers.ofString(json.toString()))
-                .header("Content-Type", "application/json")
+        return setupSystem(null);
+    }
+
+    /** Setup with explicit credentials (used when a password must stay invalid). */
+    public RichResponse setupSystem(String passwordOverride) {
+        // The setup router only matches application/x-www-form-urlencoded (JSON is the
+        // request-body metadata in the OpenAPI document, not the actual route content type).
+        var form = java.util.stream.Stream.of(
+                        "username=" + encode(E2EConfig.ADMIN_USERNAME),
+                        "password=" + encode(passwordOverride == null ? E2EConfig.ADMIN_PASSWORD : passwordOverride),
+                        "email=" + encode(E2EConfig.ADMIN_EMAIL),
+                        "siteTitle=" + encode(E2EConfig.SITE_TITLE),
+                        "language=" + encode(E2EConfig.LANGUAGE),
+                        "externalUrl=" + encode(baseUrl))
+                .reduce((left, right) -> left + "&" + right)
+                .orElse("");
+        return send("POST /system/setup", request("/system/setup", false)
+                .POST(HttpRequest.BodyPublishers.ofString(form))
+                .header("Content-Type", "application/x-www-form-urlencoded")
                 .build());
     }
 
@@ -88,18 +97,55 @@ public final class HaloApiClient {
         contentNode.put("content", content);
         contentNode.put("rawType", "HTML");
         return send("POST console draft post", jsonRequest(CONSOLE_POSTS, body)
-                .POST(HttpRequest.BodyPublishers.ofString(json.toString()))
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
                 .header("Content-Type", "application/json")
                 .build());
     }
 
     /** Lists posts filtered by the unique slug assigned by the frontend suite. */
+    /** Console update used by the UI editor: post spec + raw content in one call. */
+    public RichResponse updateDraft(String name, JsonNode post, String content) {
+        var body = json.createObjectNode();
+        body.set("post", post);
+        var contentNode = body.putObject("content");
+        contentNode.put("raw", content);
+        contentNode.put("content", content);
+        contentNode.put("rawType", "HTML");
+        return send("PUT console draft post " + name, jsonRequest(CONSOLE_POSTS + "/" + name, body)
+                .PUT(HttpRequest.BodyPublishers.ofString(body.toString()))
+                .header("Content-Type", "application/json")
+                .build());
+    }
+
     public RichResponse listPosts() {
         return send("GET post list", jsonRequest(POSTS + "?page=1&size=100").GET().build());
     }
 
     public RichResponse getPost(String name) {
         return send("GET post " + name, jsonRequest(POSTS + "/" + name).GET().build());
+    }
+
+    /** Bounded polling for write calls that may race with reconcilers (e.g. optimistic locks). */
+    public RichResponse waitForStatus(
+            java.util.function.Supplier<RichResponse> action, int expected, Duration timeout) {
+        var deadline = System.nanoTime() + timeout.toNanos();
+        RichResponse last = null;
+        while (System.nanoTime() < deadline) {
+            last = action.get();
+            if (last.status() == expected) {
+                return last;
+            }
+            if (last.status() != 409) {
+                return last;
+            }
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Interrupted while retrying a conflicting write", e);
+            }
+        }
+        return last;
     }
 
     public RichResponse listPostsBySlug(String slug) {
@@ -127,7 +173,7 @@ public final class HaloApiClient {
         var updated = post.deepCopy();
         ((ObjectNode) updated.path("spec")).put("title", newTitle);
         return send("PUT update post " + name, jsonRequest(POSTS + "/" + name, updated)
-                .PUT(HttpRequest.BodyPublishers.ofString(json.toString()))
+                .PUT(HttpRequest.BodyPublishers.ofString(updated.toString()))
                 .header("Content-Type", "application/json")
                 .build());
     }
@@ -194,13 +240,12 @@ public final class HaloApiClient {
         return request(path, false);
     }
 
-    private HttpRequest.Builder request(String path, boolean withBody) {
+    private HttpRequest.Builder request(String path, boolean authenticated) {
         var builder = HttpRequest.newBuilder(URI.create(baseUrl + path))
                 .timeout(Duration.ofSeconds(60))
-                .header("Accept", "application/json")
-                .header("Authorization", basicAuth());
-        if (!withBody) {
-            builder.setHeader("X-E2E-No-Body", "true");
+                .header("Accept", "application/json");
+        if (authenticated) {
+            builder.header("Authorization", basicAuth());
         }
         return builder;
     }
@@ -295,5 +340,9 @@ public final class HaloApiClient {
             return "";
         }
         return body.length() <= 2000 ? body : body.substring(0, 2000) + "...<truncated>";
+    }
+
+    private static String encode(String value) {
+        return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8);
     }
 }

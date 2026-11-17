@@ -16,7 +16,9 @@ public final class E2EConfig {
     /** Temporary instance administrator. Not a real credential; never attached to reports. */
     public static final String ADMIN_USERNAME = "e2e-admin";
 
-    public static final String ADMIN_PASSWORD = "e2e-Admin.1234";
+    public static final String ADMIN_PASSWORD = "E2eAdmin.1234";
+    /** Invalid by contract (hyphen is not allowed): setup must reject it without creating an admin. */
+    public static final String WRONG_PASSWORD = "e2e-Admin.1234";
 
     public static final String ADMIN_EMAIL = "e2e-admin@example.test";
 

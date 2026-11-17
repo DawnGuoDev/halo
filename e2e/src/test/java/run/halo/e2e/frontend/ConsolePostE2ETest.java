@@ -143,9 +143,8 @@ public class ConsolePostE2ETest {
     private void verifyPublished(ConsolePageObject console, String title) {
         var page = console.posts().titleInput().page();
         page.waitForURL(url -> url.contains("/console/posts"), new Page.WaitForURLOptions().setTimeout(30_000));
+        console.posts().expectRowWithText(title);
         var listItem = console.posts().rowWithText(title);
-        Assert.assertTrue(
-                console.posts().hasRowWithText(title), "Post list must show the new post title [" + title + "]");
         Assert.assertNotNull(listItem, "Post row for [" + title + "]");
 
         // The UI generates the slug from the title, so look the created post up by title through the
@@ -153,8 +152,11 @@ public class ConsolePostE2ETest {
         var posts = api.parse(Assertions.assertStatus(api.listPosts(), 200));
         JsonNode created = null;
         for (JsonNode item : posts.path("items")) {
-            if (title.equals(item.path("post").path("spec").path("title").asText())) {
-                created = item.path("post");
+            // The console list returns ListedPost objects: some endpoints wrap them in "post",
+            // others return the Post fields directly.
+            JsonNode candidate = item.has("post") ? item.path("post") : item;
+            if (title.equals(candidate.path("spec").path("title").asText())) {
+                created = candidate;
                 break;
             }
         }

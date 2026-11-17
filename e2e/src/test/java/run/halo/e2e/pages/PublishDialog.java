@@ -19,17 +19,28 @@ public final class PublishDialog {
         this.page = page;
     }
 
+    /**
+     * The settings modal shows up for every new post. In this environment Playwright's
+     * actionability check reports the VModal wrapper as hidden, so the decision is based on the
+     * rendered settings content (title "文章设置" and footer actions).
+     */
     public boolean isVisible() {
-        return page.getByRole(AriaRole.DIALOG).isVisible();
+        var dialog = page.locator("[role=dialog]");
+        return dialog.count() > 0
+                && dialog.getByText(java.util.regex.Pattern.compile("^(文章设置|Post settings)$")).count() > 0;
     }
 
     @Step("在发布设置弹窗中确认发布")
     public void confirmPublish() {
-        var dialog = page.getByRole(AriaRole.DIALOG);
-        assertThat(dialog).isVisible();
-        dialog.getByRole(AriaRole.BUTTON, new Locator.GetByRoleOptions().setName("发布"))
-                .last()
-                .click();
+        // Footer publish action of the settings dialog (the header action sits outside it).
+        // getByRole excludes the modal because of the outer focus trap, so the exact label is used
+        // with a forced click; the post list URL afterwards confirms the action succeeded.
+        var publish = page.locator("[role=dialog]")
+                .getByText(java.util.regex.Pattern.compile("^(发布|Publish)$"));
+        assertThat(publish.last()).isAttached();
+        publish.last().click(new Locator.ClickOptions().setForce(true));
+        page.waitForURL(url -> url.contains("/console/posts") && !url.contains("/editor"),
+                new Page.WaitForURLOptions().setTimeout(60_000));
     }
 
     public Page page() {

@@ -25,7 +25,11 @@ public final class PostListPage {
 
     @Step("点击新建文章")
     public void clickNewPost() {
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("新建"))
+        // English UI ("New") and Chinese UI ("新建") are both supported.
+        page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions().setName(java.util.regex.Pattern.compile("^(New|新建)$")))
+                .first()
                 .first()
                 .click();
     }
@@ -47,7 +51,10 @@ public final class PostListPage {
 
     @Step("点击编辑器顶部发布按钮")
     public void clickPublish() {
-        page.getByRole(AriaRole.BUTTON, new Page.GetByRoleOptions().setName("发布"))
+        page.getByRole(
+                        AriaRole.BUTTON,
+                        new Page.GetByRoleOptions().setName(java.util.regex.Pattern.compile("^(Publish|发布)$")))
+                .first()
                 .first()
                 .click();
     }
@@ -64,11 +71,24 @@ public final class PostListPage {
                 > 0;
     }
 
+    /** Bounded wait for a row (the list is refetched right after publishing). */
+    @Step("等待文章 {text} 出现在列表")
+    public void expectRowWithText(String text) {
+        page.waitForCondition(
+                () -> hasRowWithText(text), new Page.WaitForConditionOptions().setTimeout(30_000));
+        assertThat(rowWithText(text)).isAttached();
+    }
+
     public String titleValue() {
         return titleInput().inputValue();
     }
 
+    /**
+     * Title input of the default editor. It is matched by the i18n placeholder from
+     * {@code core.components.default_editor.title_placeholder} ("请输入标题" / "Title"), avoiding
+     * the sidebar search box which is the first placeholder input on the page.
+     */
     public Locator titleInput() {
-        return page.locator("input[type=text][placeholder], input[placeholder]").first();
+        return page.getByPlaceholder(java.util.regex.Pattern.compile(".*(Title|请输入标题).*")).first();
     }
 }

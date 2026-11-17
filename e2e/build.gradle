@@ -49,6 +49,8 @@ dependencies {
     testImplementation "org.testng:testng:${testngVersion}"
     testImplementation "io.qameta.allure:allure-testng:${allureVersion}"
     testImplementation "com.microsoft.playwright:playwright:${playwrightVersion}"
+    // JSON contract parsing for backend/UI assertions; test scope only.
+    testImplementation 'com.fasterxml.jackson.core:jackson-databind:2.21.1'
 
     allureCli "io.qameta.allure:allure-commandline:${allureVersion}"
 }
@@ -131,14 +133,22 @@ tasks.register('e2eAllureReport') {
             throw new GradleException("No Allure results found in ${results}. Run :e2e:testBackend / :e2e:testFrontend first.")
         }
         project.delete(report)
-        def allureHome = configurations.allureCli.singleFile
-        project.javaexec {
-            classpath = configurations.allureCli
-            mainClass = 'io.qameta.allure.CommandLine'
-            args 'generate', results.absolutePath, '--clean', '-o', report.absolutePath
+        def allureHome = configurations.allureCli.resolvedConfiguration.resolvedArtifacts
+                .find { it.moduleVersion.id.name == 'allure-commandline' }
+        def allureJava = javaToolchains.launcherFor {
+            languageVersion = JavaLanguageVersion.of(21)
+        }.get().executablePath.asFile.absolutePath
+        def process = new ProcessBuilder(
+                allureJava, '-cp', configurations.allureCli.asPath, 'io.qameta.allure.CommandLine',
+                'generate', results.absolutePath, '--clean', '-o', report.absolutePath)
+                .redirectErrorStream(true)
+                .start()
+        def outputText = process.inputStream.getText('UTF-8')
+        if (process.waitFor() != 0) {
+            throw new GradleException("Allure report generation failed:\n" + outputText)
         }
         logger.lifecycle("Allure report: ${new File(report, 'index.html')}")
-        logger.lifecycle("Allure CLI: ${allureHome.name}")
+        logger.lifecycle("Allure CLI: ${allureHome?.moduleVersion?.id?.version}")
         if (frontendTest.get().state.failure != null) {
             throw new GradleException("Frontend E2E failed (see Allure report: ${new File(report, 'index.html')}): "
                     + frontendTest.get().state.failure.message)
@@ -163,4 +173,9 @@ tasks.register('e2eCheck') {
     group = 'verification'
     description = 'Compiles E2E sources only (no test execution, no instance, no browser).'
     dependsOn tasks.named('testClasses')
+}
+
+// The default `test` task must never execute E2E (browser + long chain); `check` depends on it.
+tasks.named('test', Test) {
+    enabled = false
 }

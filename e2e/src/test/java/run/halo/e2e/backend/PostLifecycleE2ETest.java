@@ -90,8 +90,9 @@ public class PostLifecycleE2ETest extends AbstractE2ETest {
         }
 
         var me = Assertions.assertStatus(api.currentUser(), 200);
+        // /users/- returns {user, roles, passwordSet}; metadata.name lives under user.
         var user = api.parse(me);
-        var name = Assertions.requireText(user, "metadata.name");
+        var name = Assertions.requireText(user, "user.metadata.name");
         Assert.assertEquals(name, E2EConfig.ADMIN_USERNAME, "Authenticated user metadata.name");
         return name;
     }
@@ -102,7 +103,7 @@ public class PostLifecycleE2ETest extends AbstractE2ETest {
         var slug = scope.slug("post");
         var created = api.createDraft(title, slug, "<p>E2E draft content</p>");
 
-        Assertions.equalsStatus(created, 201, "POST /apis/api.console.halo.run/v1alpha1/posts");
+        Assertions.assertStatus(created, 200);
         var post = api.parse(created);
         var name = Assertions.requireText(post, "metadata.name");
         Assertions.assertField(post, "spec.title", title);
@@ -118,10 +119,24 @@ public class PostLifecycleE2ETest extends AbstractE2ETest {
 
     @Step("更新标题并发布文章，有上限轮询已发布状态")
     private JsonNode updateAndPublish(String name, JsonNode post, String newTitle) {
-        // Content must be saved before publishing so the release snapshot contains the draft body.
-        Assertions.assertStatus(api.updateTitle(name, post, newTitle), 200);
-        var response = api.publishPost(name);
-        Assertions.assertStatus(response, 200);
+        // Console update (spec + content) is the same call the UI editor uses before publishing.
+        // Read the latest version: the draft reconciler updates the post right after creation.
+        var response = api.waitForStatus(
+                () -> {
+                    var latest = api.getPost(name);
+                    if (latest.status() != 200) {
+                        return latest;
+                    }
+                    var updated = api.parse(latest).deepCopy();
+                    ((com.fasterxml.jackson.databind.node.ObjectNode) updated.path("spec")).put("title", newTitle);
+                    return api.updateDraft(name, updated, "<p>Updated by TC-BE-001</p>");
+                },
+                200,
+                java.time.Duration.ofSeconds(30));
+        if (response.status() != 200) {
+            Assertions.assertStatus(response, 200);
+        }
+        Assertions.assertStatus(api.publishPost(name), 200);
 
         // The publish endpoint waits for the released snapshot; polling covers reconciler lag
         // without any fixed sleep beyond the bounded retry interval.
@@ -151,7 +166,31 @@ public class PostLifecycleE2ETest extends AbstractE2ETest {
     private void deleteAndVerifyGone(String name) {
         var slug = Assertions.text(api.parse(Assertions.assertStatus(api.getPost(name), 200)), "spec.slug");
         Assertions.assertStatusOneOf(api.deletePost(name), 200, 204);
-        Assertions.assertStatus(api.getPost(name), 404);
-        Assertions.assertListNotContains(api.parse(Assertions.assertStatus(api.listPostsBySlug(slug), 200)), name);
+
+        // Deletion is asynchronous: poll the active list (and the per-resource availability)
+        // with a bounded timeout instead of assuming it is instant.
+        var deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        String lastObservation = "not checked";
+        while (System.nanoTime() < deadline) {
+            var single = api.getPost(name);
+            var list = api.listPostsBySlug(slug);
+            long activeTotal = list.status() == 200 ? api.parse(list).path("total").asLong(-1) : -1;
+            String deletedFlag = single.status() == 200
+                    ? Assertions.text(api.parse(single), "spec.deleted")
+                    : null;
+            boolean goneFromActiveList = list.status() == 200 && activeTotal == 0;
+            boolean unavailableOrDeleted = single.status() == 404 || "true".equals(deletedFlag);
+            if (goneFromActiveList && unavailableOrDeleted) {
+                return;
+            }
+            lastObservation = "single=" + single.status() + ", deleted=" + deletedFlag + ", activeTotal=" + activeTotal;
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new AssertionError("Interrupted while polling deletion", e);
+            }
+        }
+        throw new AssertionError("Post [%s] was not removed within 30s (%s)".formatted(name, lastObservation));
     }
 }

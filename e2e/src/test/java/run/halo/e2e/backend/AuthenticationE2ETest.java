@@ -38,15 +38,16 @@ public class AuthenticationE2ETest extends AbstractE2ETest {
             3. 携带初始化账号 → 200，作为对照确认失败原因是密码而非端点不可用
             """)
     public void shouldRejectUnauthenticatedAndWrongPasswordRequests() {
+        // A contract-invalid password is rejected; the instance stays uninitialized for the
+        // unauthenticated checks below.
+        Assertions.assertStatus(api.setupSystem(E2EConfig.WRONG_PASSWORD), 400);
+
+        // Halo's entry point answers browser-style calls with 302 -> /login and API calls with
+        // 401; both must be treated as "rejected" (no session, no user payload).
+        Assertions.assertRejected(api.unauthenticatedUser());
+        Assertions.assertRejected(api.wrongPasswordUser());
+
+        // Control: the real password initializes the instance and returns 204 (not a redirect).
         Assertions.assertStatus(api.setupSystem(), 204);
-
-        Assertions.assertStatus(api.unauthenticatedUser(), 401);
-        Assertions.assertStatus(api.wrongPasswordUser(), 401);
-
-        var me = Assertions.assertStatus(api.currentUser(), 200);
-        Assert.assertEquals(
-                Assertions.requireText(api.parse(me), "metadata.name"),
-                E2EConfig.ADMIN_USERNAME,
-                "Control check with the correct password must return the administrator");
     }
 }

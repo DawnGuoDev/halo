@@ -41,6 +41,28 @@ public final class Assertions {
                         HaloApiClient.truncate(E2EConfig.sanitize(response.body()))));
     }
 
+    /**
+     * Halo answers an unauthenticated request either with 401 (API style) or a 302 redirect to
+     * /login; both mean "rejected", and neither may return a user payload.
+     */
+    @Step("断言请求被拒绝（401 或 302 → /login）：{response.label}")
+    public static HaloApiClient.RichResponse assertRejected(HaloApiClient.RichResponse response) {
+        attach(response);
+        var redirectedToLogin = response.status() == 302
+                && response.headers().firstValue("Location").orElse("").contains("/login");
+        if (response.status() != 401 && !redirectedToLogin) {
+            throw new AssertionError("Step [%s] expected HTTP 401 or 302 -> /login but got %d. Body: %s"
+                    .formatted(
+                            response.label(),
+                            response.status(),
+                            HaloApiClient.truncate(E2EConfig.sanitize(response.body()))));
+        }
+        if (!response.body().isBlank() && response.body().contains("\"user\"")) {
+            throw new AssertionError("Rejected request [%s] returned a user payload".formatted(response.label()));
+        }
+        return response;
+    }
+
     @Step("断言 JSON 字段 {path} 等于期望值")
     public static void assertField(JsonNode json, String path, String expected) {
         var actual = text(json, path);
