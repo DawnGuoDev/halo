@@ -29,6 +29,7 @@ import CoverField from "./entity-fields/CoverField.vue";
 import PublishStatusField from "./entity-fields/PublishStatusField.vue";
 import PublishTimeField from "./entity-fields/PublishTimeField.vue";
 import TitleField from "./entity-fields/TitleField.vue";
+import ViewsField from "./entity-fields/ViewsField.vue";
 import VisibleField from "./entity-fields/VisibleField.vue";
 
 const { t } = useI18n();
@@ -189,6 +190,14 @@ const { data: fields } = useEntityFieldItemExtensionPoint<ListedPost>(
       priority: 20,
       position: "end",
       component: markRaw(PublishStatusField),
+      props: {
+        post: props.post,
+      },
+    },
+    {
+      priority: 25,
+      position: "end",
+      component: markRaw(ViewsField),
       props: {
         post: props.post,
       },
