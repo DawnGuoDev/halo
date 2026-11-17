@@ -120,7 +120,12 @@ export default defineConfig(({ command, mode }) => ({
     environment: "jsdom",
     include: ["**/*.spec.ts"],
     root: fileURLToPath(new URL("./", import.meta.url)),
-    exclude: [...configDefaults.exclude, "./packages/**/*.ts"],
+    exclude: [
+      ...configDefaults.exclude,
+      "./packages/**/*.ts",
+      // e2e is a standalone Playwright project (own package.json), not part of the ui workspace
+      "./e2e/**",
+    ],
     reporters: [["html", { outputDir: "build/test-result" }]],
   },
   fmt: {
