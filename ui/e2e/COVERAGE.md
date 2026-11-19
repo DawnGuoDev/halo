@@ -1,6 +1,6 @@
 # 需求 ↔ 用例矩阵（文章收藏）
 
-来源：`artifacts/Spec 设计/文章收藏-需求Spec/spec.md`（v3，REQ-001～REQ-006）、产品设计说明、代码 commit `9161e48`。
+来源：`artifacts/Spec 设计/需求Spec/spec.md`（v1，SPEC-POST-FAVORITE-001，REQ-001～REQ-006）、产品设计文档、代码 commit `caeb05108`。
 层级：**前端 E2E**（`ui/`，真实浏览器 + 真实后端）与 **后端 API E2E**（`api/`，真实服务，不 mock 认证/权限）。
 
 > 选择器口径：role / `aria-label` / `aria-pressed` / 可见文案（读取 `ui/src/locales/zh-CN.json`）/ URL 参数，不依赖 Tailwind 类名（Spec 明确要求尺寸与位置时除外）。

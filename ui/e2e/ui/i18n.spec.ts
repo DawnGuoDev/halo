@@ -20,6 +20,8 @@ const REQUIRED_KEYS = [
   "core.post.empty.unfavorite.description",
   "core.post.empty.favorite.action",
   "core.post.toast.favorite_failed",
+  "core.post.toast.favorite_success",
+  "core.post.toast.unfavorite_success",
 ];
 
 const LOCALES = ["zh-CN", "zh-TW", "en", "es"] as const;
