@@ -725,6 +725,14 @@
             }
           },
           {
+            "description": "Optional keyword used to match the raw comment text. Applied on top of the visibility filter.",
+            "in": "query",
+            "name": "keyword",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "description": "Reply size of the comment, default is 10, only works when withReplies is true.",
             "in": "query",
             "name": "replySize",
@@ -842,6 +850,14 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "description": "Optional keyword used to match the raw reply text. Applied on top of the visibility filter.",
+            "in": "query",
+            "name": "keyword",
+            "schema": {
+              "type": "string"
             }
           }
         ],

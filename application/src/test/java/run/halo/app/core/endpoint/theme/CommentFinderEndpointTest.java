@@ -118,7 +118,7 @@ class CommentFinderEndpointTest {
 
     @Test
     void listComments() {
-        when(commentPublicQueryService.list(any(), any(PageRequest.class)))
+        when(commentPublicQueryService.list(any(), any(), any(PageRequest.class)))
                 .thenReturn(Mono.just(new ListResult<>(1, 10, 0, List.of())));
 
         Ref ref = new Ref();
@@ -141,14 +141,56 @@ class CommentFinderEndpointTest {
                 .expectStatus()
                 .isOk();
         ArgumentCaptor<Ref> refCaptor = ArgumentCaptor.forClass(Ref.class);
-        verify(commentPublicQueryService, times(1)).list(refCaptor.capture(), any(PageRequest.class));
+        verify(commentPublicQueryService, times(1)).list(refCaptor.capture(), isNull(), any(PageRequest.class));
         Ref value = refCaptor.getValue();
         assertThat(value).isEqualTo(ref);
     }
 
     @Test
+    void listCommentsPassesKeywordToPublicQueryService() {
+        when(commentPublicQueryService.list(any(), any(), any(PageRequest.class)))
+                .thenReturn(Mono.just(new ListResult<>(1, 10, 0, List.of())));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/comments")
+                        .queryParam("kind", "Post")
+                        .queryParam("name", "test")
+                        .queryParam("keyword", "hello world")
+                        .queryParam("page", 1)
+                        .queryParam("size", 10)
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        verify(commentPublicQueryService, times(1)).list(any(), eq("hello world"), any(PageRequest.class));
+    }
+
+    @Test
+    void listCommentsTreatsBlankKeywordAsAbsent() {
+        when(commentPublicQueryService.list(any(), any(), any(PageRequest.class)))
+                .thenReturn(Mono.just(new ListResult<>(1, 10, 0, List.of())));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/comments")
+                        .queryParam("kind", "Post")
+                        .queryParam("name", "test")
+                        .queryParam("keyword", "   ")
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        verify(commentPublicQueryService, times(1)).list(any(), isNull(), any(PageRequest.class));
+    }
+
+    @Test
     void listCommentsWithCreationTimestampSort() {
-        when(commentPublicQueryService.list(any(), any(PageRequest.class)))
+        when(commentPublicQueryService.list(any(), any(), any(PageRequest.class)))
                 .thenReturn(Mono.just(new ListResult<>(1, 10, 0, List.of())));
 
         webTestClient
@@ -164,7 +206,7 @@ class CommentFinderEndpointTest {
                 .isOk();
 
         var pageRequestCaptor = ArgumentCaptor.forClass(PageRequest.class);
-        verify(commentPublicQueryService).list(any(), pageRequestCaptor.capture());
+        verify(commentPublicQueryService).list(any(), isNull(), pageRequestCaptor.capture());
         assertThat(pageRequestCaptor.getValue().getSort())
                 .isEqualTo(Sort.by(Sort.Order.desc("metadata.creationTimestamp")));
     }
@@ -191,7 +233,7 @@ class CommentFinderEndpointTest {
 
     @Test
     void listCommentReplies() {
-        when(commentPublicQueryService.listReply(any(), anyInt(), anyInt()))
+        when(commentPublicQueryService.listReply(any(), any(), any(PageRequest.class)))
                 .thenReturn(Mono.just(new ListResult<>(2, 20, 0, List.of())));
 
         webTestClient
@@ -205,7 +247,33 @@ class CommentFinderEndpointTest {
                 .expectStatus()
                 .isOk();
 
-        verify(commentPublicQueryService, times(1)).listReply(eq("test-comment"), eq(2), eq(20));
+        var pageCaptor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(commentPublicQueryService, times(1)).listReply(eq("test-comment"), isNull(), pageCaptor.capture());
+        assertThat(pageCaptor.getValue().getPageNumber()).isEqualTo(2);
+        assertThat(pageCaptor.getValue().getPageSize()).isEqualTo(20);
+    }
+
+    @Test
+    void listCommentRepliesPassesKeywordToPublicQueryService() {
+        when(commentPublicQueryService.listReply(any(), any(), any(PageRequest.class)))
+                .thenReturn(Mono.just(new ListResult<>(1, 10, 0, List.of())));
+
+        webTestClient
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/comments/test-comment/reply")
+                        .queryParam("keyword", "hello")
+                        .queryParam("page", 1)
+                        .queryParam("size", 10)
+                        .build())
+                .exchange()
+                .expectStatus()
+                .isOk();
+
+        var pageCaptor = ArgumentCaptor.forClass(PageRequest.class);
+        verify(commentPublicQueryService, times(1)).listReply(eq("test-comment"), eq("hello"), pageCaptor.capture());
+        assertThat(pageCaptor.getValue().getPageNumber()).isEqualTo(1);
+        assertThat(pageCaptor.getValue().getPageSize()).isEqualTo(10);
     }
 
     @Test

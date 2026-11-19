@@ -415,6 +415,10 @@ class SchemeInitializer implements SmartLifecycle {
                             .map(ReplySpec::getOwner)
                             .map(owner -> ownerIdentity(owner.getKind(), owner.getName()))
                             .orElse(null)));
+            indexSpecs.add(IndexSpecs.<Reply, String>single("spec.raw", String.class)
+                    .indexFunc(reply -> Optional.ofNullable(reply.getSpec())
+                            .map(ReplySpec::getRaw)
+                            .orElse(null)));
             indexSpecs.add(IndexSpecs.<Reply, Boolean>single(Reply.REQUIRE_SYNC_ON_STARTUP_INDEX_NAME, Boolean.class)
                     .indexFunc(reply -> {
                         var version = reply.getMetadata().getVersion();

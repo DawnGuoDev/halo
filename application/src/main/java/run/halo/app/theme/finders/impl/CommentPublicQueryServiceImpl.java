@@ -79,7 +79,7 @@ public class CommentPublicQueryServiceImpl implements CommentPublicQueryService 
     @Override
     public Mono<ReplyVo> getReply(String commentName, String replyName) {
         return getVisibleComment(commentName)
-                .flatMap(comment -> populateReplyListOptions(comment)
+                .flatMap(comment -> populateReplyListOptions(comment, null)
                         .doOnNext(options -> options.setFieldSelector(
                                 options.getFieldSelector().andQuery(equal("metadata.name", replyName))))
                         .flatMap(options -> client.listBy(Reply.class, options, PageRequestImpl.ofSize(1)))
@@ -100,10 +100,21 @@ public class CommentPublicQueryServiceImpl implements CommentPublicQueryService 
 
     @Override
     public Mono<ListResult<CommentVo>> list(Ref ref, PageRequest pageParam) {
+        return listWithKeyword(ref, null, pageParam);
+    }
+
+    @Override
+    public Mono<ListResult<CommentVo>> list(
+            @Nullable Ref ref, @Nullable String keyword, @Nullable PageRequest pageParam) {
+        return listWithKeyword(ref, keyword, pageParam);
+    }
+
+    Mono<ListResult<CommentVo>> listWithKeyword(
+            @Nullable Ref ref, @Nullable String keyword, @Nullable PageRequest pageParam) {
         var pageRequest = Optional.ofNullable(pageParam)
                 .map(page -> page.withSort(page.getSort().and(defaultCommentSort())))
                 .orElseGet(() -> PageRequestImpl.ofSize(10));
-        return populateCommentListOptions(ref)
+        return populateCommentListOptions(ref, keyword)
                 .flatMap(listOptions -> client.listBy(Comment.class, listOptions, pageRequest))
                 .flatMap(listResult -> permalinkService
                         .getSubjectUrl(ref)
@@ -145,9 +156,20 @@ public class CommentPublicQueryServiceImpl implements CommentPublicQueryService 
 
     @Override
     public Mono<ListResult<ReplyVo>> listReply(String commentName, PageRequest pageParam) {
+        return listReplyWithKeyword(commentName, null, pageParam);
+    }
+
+    @Override
+    public Mono<ListResult<ReplyVo>> listReply(
+            String commentName, @Nullable String keyword, @Nullable PageRequest pageParam) {
+        return listReplyWithKeyword(commentName, keyword, pageParam);
+    }
+
+    Mono<ListResult<ReplyVo>> listReplyWithKeyword(
+            String commentName, @Nullable String keyword, @Nullable PageRequest pageParam) {
         // check comment
         return client.get(Comment.class, commentName)
-                .flatMap(comment -> populateReplyListOptions(comment).flatMap(listOptions -> {
+                .flatMap(comment -> populateReplyListOptions(comment, keyword).flatMap(listOptions -> {
                     var pageRequest = Optional.ofNullable(pageParam)
                             .map(page -> page.withSort(page.getSort().and(defaultReplySort())))
                             .orElseGet(() -> PageRequestImpl.ofSize(PageRequestImpl.MAX_SIZE));
@@ -273,11 +295,16 @@ public class CommentPublicQueryServiceImpl implements CommentPublicQueryService 
         return userService.getUserOrGhost(owner.getName()).map(OwnerInfo::from);
     }
 
-    private Mono<ListOptions> populateCommentListOptions(@Nullable Ref ref) {
+    private Mono<ListOptions> populateCommentListOptions(@Nullable Ref ref, @Nullable String keyword) {
         return populateVisibleListOptions(null)
                 .doOnNext(builder -> {
                     if (ref != null) {
                         builder.andQuery(equal("spec.subjectRef", Comment.toSubjectRefKey(ref)));
+                    }
+                    // The keyword is applied after the visibility conditions, so that it can only
+                    // narrow the public result set and never bypass it.
+                    if (StringUtils.isNotBlank(keyword)) {
+                        builder.andQuery(contains("spec.raw", keyword));
                     }
                 })
                 .map(ListOptions.ListOptionsBuilder::build);
@@ -356,12 +383,17 @@ public class CommentPublicQueryServiceImpl implements CommentPublicQueryService 
                 });
     }
 
-    private Mono<ListOptions> populateReplyListOptions(Comment comment) {
+    private Mono<ListOptions> populateReplyListOptions(Comment comment, @Nullable String keyword) {
         // The comment name must be equal to the comment name of the reply
         // is approved and not hidden
         return populateVisibleListOptions(comment)
-                .doOnNext(builder -> builder.andQuery(
-                        equal("spec.commentName", comment.getMetadata().getName())))
+                .doOnNext(builder -> {
+                    builder.andQuery(
+                            equal("spec.commentName", comment.getMetadata().getName()));
+                    if (StringUtils.isNotBlank(keyword)) {
+                        builder.andQuery(contains("spec.raw", keyword));
+                    }
+                })
                 .map(ListOptions.ListOptionsBuilder::build);
     }
 

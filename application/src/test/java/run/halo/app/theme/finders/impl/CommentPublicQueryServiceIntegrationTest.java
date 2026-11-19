@@ -178,6 +178,86 @@ class CommentPublicQueryServiceIntegrationTest {
         }
 
         @Test
+        void listWithKeywordMatchesRawTextOfVisibleComments() {
+            Ref ref = Ref.of("fake-post", GroupVersionKind.fromExtension(Post.class));
+            commentPublicQueryService
+                    .list(
+                            ref,
+                            "fake-raw-approved",
+                            PageRequestImpl.of(1, 10, CommentPublicQueryServiceImpl.defaultCommentSort()))
+                    .as(StepVerifier::create)
+                    .consumeNextWith(listResult -> {
+                        assertThat(listResult.getTotal()).isEqualTo(2);
+                        assertThat(listResult.getItems())
+                                .extracting(comment -> comment.getMetadata().getName())
+                                .containsExactlyInAnyOrder("comment-approved", "comment-approved-but-another-owner");
+                    })
+                    .verifyComplete();
+        }
+
+        @Test
+        void listWithKeywordDoesNotMatchUnapprovedOrHiddenComments() {
+            Ref ref = Ref.of("fake-post", GroupVersionKind.fromExtension(Post.class));
+            commentPublicQueryService
+                    .list(
+                            ref,
+                            "fake-raw",
+                            PageRequestImpl.of(1, 10, CommentPublicQueryServiceImpl.defaultCommentSort()))
+                    .as(StepVerifier::create)
+                    .consumeNextWith(listResult -> assertThat(listResult.getItems())
+                            .extracting(comment -> comment.getMetadata().getName())
+                            .doesNotContain(
+                                    "comment-not-approved",
+                                    "comment-not-approved-and-another",
+                                    "comment-not-approved-anonymous"))
+                    .verifyComplete();
+        }
+
+        @Test
+        void listWithUnmatchedKeywordReturnsEmptyResult() {
+            Ref ref = Ref.of("fake-post", GroupVersionKind.fromExtension(Post.class));
+            commentPublicQueryService
+                    .list(
+                            ref,
+                            "no-such-keyword-anywhere",
+                            PageRequestImpl.of(1, 10, CommentPublicQueryServiceImpl.defaultCommentSort()))
+                    .as(StepVerifier::create)
+                    .consumeNextWith(listResult -> {
+                        assertThat(listResult.getTotal()).isZero();
+                        assertThat(listResult.getItems()).isEmpty();
+                    })
+                    .verifyComplete();
+        }
+
+        @Test
+        void listWithKeywordIsCaseInsensitive() {
+            Ref ref = Ref.of("fake-post", GroupVersionKind.fromExtension(Post.class));
+            commentPublicQueryService
+                    .list(
+                            ref,
+                            "FAKE-RAW-APPROVED",
+                            PageRequestImpl.of(1, 10, CommentPublicQueryServiceImpl.defaultCommentSort()))
+                    .as(StepVerifier::create)
+                    .consumeNextWith(listResult -> assertThat(listResult.getItems())
+                            .extracting(comment -> comment.getMetadata().getName())
+                            .containsExactlyInAnyOrder("comment-approved", "comment-approved-but-another-owner"))
+                    .verifyComplete();
+        }
+
+        @Test
+        void listWithBlankKeywordBehavesLikeNoKeyword() {
+            Ref ref = Ref.of("fake-post", GroupVersionKind.fromExtension(Post.class));
+            commentPublicQueryService
+                    .list(ref, "   ", PageRequestImpl.of(1, 10, CommentPublicQueryServiceImpl.defaultCommentSort()))
+                    .as(StepVerifier::create)
+                    .consumeNextWith(listResult -> {
+                        assertThat(listResult.getTotal()).isEqualTo(2);
+                        assertThat(listResult.getItems()).hasSize(2);
+                    })
+                    .verifyComplete();
+        }
+
+        @Test
         @WithMockUser(username = AnonymousUserConst.PRINCIPAL)
         void listWhenUserIsAnonymous() {
             Ref ref = Ref.of("fake-post", GroupVersionKind.fromExtension(Post.class));
@@ -218,29 +298,35 @@ class CommentPublicQueryServiceIntegrationTest {
             Comment commentNotApproved = fakeComment();
             commentNotApproved.getMetadata().setName("comment-not-approved");
             commentNotApproved.getSpec().setApproved(false);
+            commentNotApproved.getSpec().setRaw("fake-raw-not-approved");
 
             Comment commentApproved = fakeComment();
             commentApproved.getMetadata().setName("comment-approved");
             commentApproved.getSpec().setApproved(true);
+            commentApproved.getSpec().setRaw("fake-raw-approved");
 
             Comment notApprovedWithAnonymous = fakeComment();
             notApprovedWithAnonymous.getMetadata().setName("comment-not-approved-anonymous");
             notApprovedWithAnonymous.getSpec().setApproved(false);
+            notApprovedWithAnonymous.getSpec().setRaw("fake-raw-not-approved-anonymous");
             notApprovedWithAnonymous.getSpec().getOwner().setName(AnonymousUserConst.PRINCIPAL);
 
             Comment commentApprovedButAnotherOwner = fakeComment();
             commentApprovedButAnotherOwner.getMetadata().setName("comment-approved-but-another-owner");
             commentApprovedButAnotherOwner.getSpec().setApproved(true);
+            commentApprovedButAnotherOwner.getSpec().setRaw("fake-raw-approved-as-well");
             commentApprovedButAnotherOwner.getSpec().getOwner().setName("another");
 
             Comment commentNotApprovedAndAnotherOwner = fakeComment();
             commentNotApprovedAndAnotherOwner.getMetadata().setName("comment-not-approved-and-another");
             commentNotApprovedAndAnotherOwner.getSpec().setApproved(false);
+            commentNotApprovedAndAnotherOwner.getSpec().setRaw("fake-raw-not-approved-and-another");
             commentNotApprovedAndAnotherOwner.getSpec().getOwner().setName("another");
 
             Comment notApprovedAndAnotherRef = fakeComment();
             notApprovedAndAnotherRef.getMetadata().setName("comment-not-approved-and-another-ref");
             notApprovedAndAnotherRef.getSpec().setApproved(false);
+            notApprovedAndAnotherRef.getSpec().setRaw("fake-raw-not-approved-and-another-ref");
             Ref anotherRef = Ref.of("another-fake-post", GroupVersionKind.fromExtension(Post.class));
             notApprovedAndAnotherRef.getSpec().setSubjectRef(anotherRef);
 
@@ -400,6 +486,35 @@ class CommentPublicQueryServiceIntegrationTest {
         }
 
         @Test
+        void listReplyWithKeywordMatchesOnlyVisibleReplies() {
+            commentPublicQueryService
+                    .listReply(
+                            "fake-comment",
+                            "keyword-only-in-one",
+                            PageRequestImpl.of(1, 10, CommentPublicQueryServiceImpl.defaultReplySort()))
+                    .as(StepVerifier::create)
+                    .consumeNextWith(result -> assertThat(result.getItems())
+                            .extracting(reply -> reply.getMetadata().getName())
+                            .containsExactly("reply-approved"))
+                    .verifyComplete();
+        }
+
+        @Test
+        void listReplyWithUnmatchedKeywordReturnsEmptyResult() {
+            commentPublicQueryService
+                    .listReply(
+                            "fake-comment",
+                            "no-such-keyword-anywhere",
+                            PageRequestImpl.of(1, 10, CommentPublicQueryServiceImpl.defaultReplySort()))
+                    .as(StepVerifier::create)
+                    .consumeNextWith(result -> {
+                        assertThat(result.getTotal()).isZero();
+                        assertThat(result.getItems()).isEmpty();
+                    })
+                    .verifyComplete();
+        }
+
+        @Test
         @WithMockUser(username = AnonymousUserConst.PRINCIPAL)
         void listWhenUserIsAnonymous() {
             commentPublicQueryService
@@ -544,10 +659,12 @@ class CommentPublicQueryServiceIntegrationTest {
             Reply notApproved = createReply();
             notApproved.getMetadata().setName("reply-not-approved");
             notApproved.getSpec().setApproved(false);
+            notApproved.getSpec().setRaw("raw with keyword-only-in-one but not approved");
 
             Reply approved = createReply();
             approved.getMetadata().setName("reply-approved");
             approved.getSpec().setApproved(true);
+            approved.getSpec().setRaw("raw with keyword-only-in-one");
 
             Reply notApprovedWithAnonymous = createReply();
             notApprovedWithAnonymous.getMetadata().setName("reply-not-approved-anonymous");
@@ -557,6 +674,7 @@ class CommentPublicQueryServiceIntegrationTest {
             Reply approvedButAnotherOwner = createReply();
             approvedButAnotherOwner.getMetadata().setName("reply-approved-but-another-owner");
             approvedButAnotherOwner.getSpec().setApproved(true);
+            approvedButAnotherOwner.getSpec().setRaw("raw without the search term");
             approvedButAnotherOwner.getSpec().getOwner().setName("another");
 
             Reply notApprovedAndAnotherOwner = createReply();

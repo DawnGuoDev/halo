@@ -153,6 +153,13 @@ public class CommentFinderEndpoint implements CustomEndpoint {
                                     .implementation(String.class))
                             .response(responseBuilder().implementation(ListResult.generateGenericClass(ReplyVo.class)));
                     PageableRequest.buildParameters(builder);
+                    builder.parameter(parameterBuilder()
+                            .in(ParameterIn.QUERY)
+                            .name("keyword")
+                            .description("Optional keyword used to match the raw reply text. "
+                                    + "Applied on top of the visibility filter.")
+                            .required(false)
+                            .implementation(String.class));
                 })
                 .build();
     }
@@ -230,7 +237,7 @@ public class CommentFinderEndpoint implements CustomEndpoint {
     Mono<ServerResponse> listComments(ServerRequest request) {
         CommentQuery commentQuery = new CommentQuery(request);
         return commentPublicQueryService
-                .list(commentQuery.toRef(), commentQuery.toPageRequest())
+                .list(commentQuery.toRef(), commentQuery.getKeyword(), commentQuery.toPageRequest())
                 .flatMap(result -> {
                     if (commentQuery.getWithReplies()) {
                         return commentPublicQueryService.convertToWithReplyVo(result, commentQuery.getReplySize());
@@ -250,8 +257,12 @@ public class CommentFinderEndpoint implements CustomEndpoint {
     Mono<ServerResponse> listCommentReplies(ServerRequest request) {
         String commentName = request.pathVariable("name");
         IListRequest.QueryListRequest queryParams = new IListRequest.QueryListRequest(request.queryParams());
+        String keyword = StringUtils.trimToNull(request.queryParam("keyword").orElse(null));
         return commentPublicQueryService
-                .listReply(commentName, queryParams.getPage(), queryParams.getSize())
+                .listReply(
+                        commentName,
+                        keyword,
+                        PageRequestImpl.of(queryParams.getPage(), queryParams.getSize(), Sort.unsorted()))
                 .flatMap(list -> ServerResponse.ok().bodyValue(list));
     }
 
@@ -321,6 +332,15 @@ public class CommentFinderEndpoint implements CustomEndpoint {
         public Boolean getWithReplies() {
             var withReplies = queryParams.getFirst("withReplies");
             return StringUtils.isNotBlank(withReplies) && Boolean.parseBoolean(withReplies);
+        }
+
+        /**
+         * Keyword used to match the raw comment text. Blank means no keyword filter.
+         *
+         * @return the keyword or null when absent/blank
+         */
+        public String getKeyword() {
+            return emptyToNull(queryParams.getFirst("keyword"));
         }
 
         /** Reply size of the comment. Defaults to 10 and only works when withReplies is true. */
@@ -400,6 +420,13 @@ public class CommentFinderEndpoint implements CustomEndpoint {
                             .description("Whether to include replies. Default is false.")
                             .required(false)
                             .implementation(Boolean.class))
+                    .parameter(parameterBuilder()
+                            .in(ParameterIn.QUERY)
+                            .name("keyword")
+                            .description("Optional keyword used to match the raw comment text. "
+                                    + "Applied on top of the visibility filter.")
+                            .required(false)
+                            .implementation(String.class))
                     .parameter(parameterBuilder()
                             .in(ParameterIn.QUERY)
                             .name("replySize")
