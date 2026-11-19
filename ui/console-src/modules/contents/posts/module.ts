@@ -1,6 +1,6 @@
 import BasicLayout from "@console/layouts/BasicLayout.vue";
 import BlankLayout from "@console/layouts/BlankLayout.vue";
-import { IconBookRead } from "@halo-dev/components";
+import { IconBookRead, IconCalendar } from "@halo-dev/components";
 import { definePlugin } from "@halo-dev/ui-shared";
 import { markRaw } from "vue";
 
@@ -27,16 +27,6 @@ export default definePlugin({
           path: "",
           name: "Posts",
           component: () => import("./PostList.vue"),
-        },
-        {
-          path: "calendar",
-          name: "PostPublishCalendar",
-          component: () => import("./calendar/CalendarView.vue"),
-          meta: {
-            title: /* @x18n-key */ "core.publish_calendar.title",
-            searchable: true,
-            permissions: ["system:posts:view"],
-          },
         },
         {
           path: "deleted",
@@ -90,6 +80,30 @@ export default definePlugin({
               },
             },
           ],
+        },
+      ],
+    },
+    {
+      path: "/posts/calendar",
+      name: "PostPublishCalendar",
+      component: BasicLayout,
+      meta: {
+        title: /* @x18n-key */ "core.publish_calendar.title",
+        searchable: true,
+        permissions: ["system:posts:view"],
+        menu: {
+          name: /* @x18n-key */ "core.publish_calendar.title",
+          group: "content",
+          icon: markRaw(IconCalendar),
+          priority: 1,
+          mobile: true,
+        },
+      },
+      children: [
+        {
+          path: "",
+          name: "PostPublishCalendarContent",
+          component: () => import("./calendar/CalendarView.vue"),
         },
       ],
     },
