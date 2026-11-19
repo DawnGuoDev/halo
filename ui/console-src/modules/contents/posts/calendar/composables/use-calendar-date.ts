@@ -76,3 +76,26 @@ export function toDateTimeLocal(iso?: string) {
   const pad = (value: number) => `${value}`.padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
+
+/**
+ * 判断当前文档能否安全写入 URL。
+ * 平台原型运行在 about:srcdoc 的沙箱 iframe（origin=null）中，
+ * history.replaceState / vue-router 的 replace 都会抛 SecurityError；
+ * 此时调用方应降级为只维护内存状态，而不是中断交互。
+ */
+export function supportsHistoryReplaceState() {
+  try {
+    if (typeof window === "undefined" || !window.history?.replaceState) {
+      return false;
+    }
+    const href = window.location?.href;
+    const protocol = window.location?.protocol;
+    if (!href || protocol === "about:") {
+      return false;
+    }
+    window.history.replaceState(window.history.state, "", href);
+    return true;
+  } catch {
+    return false;
+  }
+}

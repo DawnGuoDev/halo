@@ -10,14 +10,17 @@ import {
   VPageHeader,
   VSpace,
 } from "@halo-dev/components";
-import { useRouteQuery } from "@vueuse/router";
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRoute, useRouter } from "vue-router";
 import CalendarDetailDrawer from "./components/CalendarDetailDrawer.vue";
 import CalendarListView from "./components/CalendarListView.vue";
 import CalendarMonthView from "./components/CalendarMonthView.vue";
 import CalendarStatusTag from "./components/CalendarStatusTag.vue";
-import { formatMonth } from "./composables/use-calendar-date";
+import {
+  formatMonth,
+  supportsHistoryReplaceState,
+} from "./composables/use-calendar-date";
 import {
   useCalendarPosts,
   type ViewMode,
@@ -30,14 +33,38 @@ import {
 
 const { t } = useI18n();
 
-const view = useRouteQuery<ViewMode>("view", "calendar", {
-  transform: (value) => (value === "list" ? "list" : "calendar") as ViewMode,
-});
-const keyword = useRouteQuery<string>("keyword", "");
-const categoryQuery = useRouteQuery<string>("category", "");
+const route = useRoute();
+const router = useRouter();
+
+/**
+ * 静态原型在 origin=null（about:srcdoc）的沙箱 iframe 中运行，写 URL 会抛 SecurityError。
+ * 此时降级为只维护内存状态；控制台 SPA 中仍与现有列表页一致同步到 URL。
+ */
+const canSyncQuery = supportsHistoryReplaceState();
+
+const view = ref<ViewMode>(route.query.view === "list" ? "list" : "calendar");
+const keyword = ref<string>((route.query.keyword as string) || "");
+const categoryQuery = ref<string>((route.query.category as string) || "");
+const statusFilter = ref<string>((route.query.status as string) || "");
+const monthQuery = ref<string>((route.query.month as string) || "");
+
 const selectedCategory = computed(() => categoryQuery.value || undefined);
-const statusFilter = useRouteQuery<string>("status", "");
-const monthQuery = useRouteQuery<string>("month", "");
+
+watch(
+  [view, keyword, categoryQuery, statusFilter, monthQuery],
+  ([nextView, nextKeyword, nextCategory, nextStatus, nextMonth]) => {
+    if (!canSyncQuery) return;
+    const query: Record<string, string> = {};
+    if (nextView === "list") query.view = "list";
+    if (nextKeyword) query.keyword = nextKeyword;
+    if (nextCategory) query.category = nextCategory;
+    if (nextStatus) query.status = nextStatus;
+    if (nextMonth) query.month = nextMonth;
+    router.replace({ query }).catch(() => {
+      // 非必要交互：URL 同步失败不应中断筛选或月份切换
+    });
+  }
+);
 
 const { posts, loading, failed, load, updatePublishTime } = useCalendarPosts();
 
