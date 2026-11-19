@@ -121,6 +121,26 @@ public final class HaloApiClient {
         return send("GET post list", jsonRequest(POSTS + "?page=1&size=100").GET().build());
     }
 
+    /** Lists posts via the console endpoint with optional filters. */
+    public RichResponse listConsolePosts(
+            String labelSelector, String fieldSelector, String keyword, String sort,
+            int page, int size) {
+        var params = new StringBuilder("?page=").append(page).append("&size=").append(size);
+        if (labelSelector != null && !labelSelector.isBlank()) {
+            params.append("&labelSelector=").append(encode(labelSelector));
+        }
+        if (fieldSelector != null && !fieldSelector.isBlank()) {
+            params.append("&fieldSelector=").append(encode(fieldSelector));
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            params.append("&keyword=").append(encode(keyword));
+        }
+        if (sort != null && !sort.isBlank()) {
+            params.append("&sort=").append(encode(sort));
+        }
+        return send("GET console post list", jsonRequest(CONSOLE_POSTS + params).GET().build());
+    }
+
     public RichResponse getPost(String name) {
         return send("GET post " + name, jsonRequest(POSTS + "/" + name).GET().build());
     }
@@ -173,6 +193,28 @@ public final class HaloApiClient {
         var updated = post.deepCopy();
         ((ObjectNode) updated.path("spec")).put("title", newTitle);
         return send("PUT update post " + name, jsonRequest(POSTS + "/" + name, updated)
+                .PUT(HttpRequest.BodyPublishers.ofString(updated.toString()))
+                .header("Content-Type", "application/json")
+                .build());
+    }
+
+    /** Updates only {@code spec.publishTime} of an existing post. */
+    public RichResponse updatePublishTime(String name, JsonNode post, String publishTimeIso) {
+        var updated = post.deepCopy();
+        ((ObjectNode) updated.path("spec")).put("publishTime", publishTimeIso);
+        return send("PUT update publishTime " + name, jsonRequest(POSTS + "/" + name, updated)
+                .PUT(HttpRequest.BodyPublishers.ofString(updated.toString()))
+                .header("Content-Type", "application/json")
+                .build());
+    }
+
+    /** Sets {@code spec.publish=true} and {@code spec.publishTime} to create a scheduled post. */
+    public RichResponse schedulePublish(String name, JsonNode post, String publishTimeIso) {
+        var updated = post.deepCopy();
+        var spec = (ObjectNode) updated.path("spec");
+        spec.put("publish", true);
+        spec.put("publishTime", publishTimeIso);
+        return send("PUT schedule publish " + name, jsonRequest(POSTS + "/" + name, updated)
                 .PUT(HttpRequest.BodyPublishers.ofString(updated.toString()))
                 .header("Content-Type", "application/json")
                 .build());

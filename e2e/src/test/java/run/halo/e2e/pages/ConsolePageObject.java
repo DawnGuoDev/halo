@@ -1,12 +1,14 @@
 package run.halo.e2e.pages;
 
 import com.microsoft.playwright.Page;
+import run.halo.e2e.pages.PublishCalendarPage;
 
 /** Aggregates the console page objects used by the frontend E2E suite. */
 public final class ConsolePageObject {
 
     private final LoginPage login;
     private final PostListPage posts;
+    private final PublishCalendarPage calendar;
 
     /**
      * @param baseUrl the temporary Halo origin (console proxy) for absolute navigation; relative
@@ -15,6 +17,7 @@ public final class ConsolePageObject {
     public ConsolePageObject(Page page, String baseUrl) {
         this.login = new LoginPage(page);
         this.posts = new PostListPage(page, baseUrl);
+        this.calendar = new PublishCalendarPage(page, baseUrl);
     }
 
     public LoginPage login() {
@@ -23,5 +26,9 @@ public final class ConsolePageObject {
 
     public PostListPage posts() {
         return posts;
+    }
+
+    public PublishCalendarPage calendar() {
+        return calendar;
     }
 }
