@@ -3,6 +3,12 @@ import { stores } from "@halo-dev/ui-shared";
 import { createPinia } from "pinia";
 import "@/setup/setupStyles";
 import { createApp } from "vue";
+import {
+  calendarPreviewEnabled,
+  previewGlobalInfo,
+  previewPermissions,
+  previewUser,
+} from "@/dev/preview-session";
 import { builtinFormKitInputs } from "@/formkit/inputs";
 import { setLanguage, setupI18n } from "@/locales";
 import { setupApiClient } from "@/setup/setupApiClient";
@@ -44,17 +50,29 @@ async function initApp() {
     await setLanguage();
 
     const currentUserStore = stores.currentUser();
-    await currentUserStore.fetchCurrentUser();
 
-    const globalInfoStore = stores.globalInfo();
-    await globalInfoStore.fetchGlobalInfo();
+    if (calendarPreviewEnabled) {
+      // DEV ONLY: 无后端时注入预览会话，保证页面可直达。
+      currentUserStore.currentUser = previewUser() as never;
+      currentUserStore.isAnonymous = false;
+      const globalInfoStore = stores.globalInfo();
+      globalInfoStore.globalInfo = previewGlobalInfo() as never;
+      const { utils } = await import("@halo-dev/ui-shared");
+      const { uiPermissions } = previewPermissions();
+      utils.permission.setUserPermissions(uiPermissions);
+    } else {
+      await currentUserStore.fetchCurrentUser();
 
-    if (currentUserStore.isAnonymous) {
-      setupAppComponents();
-      return;
+      const globalInfoStore = stores.globalInfo();
+      await globalInfoStore.fetchGlobalInfo();
+
+      if (currentUserStore.isAnonymous) {
+        setupAppComponents();
+        return;
+      }
+
+      await setupUserPermissions(app);
     }
-
-    await setupUserPermissions(app);
 
     await setupUiPluginRuntime({
       app,

@@ -369,6 +369,9 @@ watch(
       <IconBookRead />
     </template>
     <template #actions>
+      <VButton :route="{ name: 'PostsCalendar' }" size="sm">
+        {{ $t("core.post_calendar.title") }}
+      </VButton>
       <VButton :route="{ name: 'Categories' }" size="sm">
         {{ $t("core.post.actions.categories") }}
       </VButton>

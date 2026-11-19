@@ -1,11 +1,41 @@
 import BasicLayout from "@console/layouts/BasicLayout.vue";
 import BlankLayout from "@console/layouts/BlankLayout.vue";
-import { IconBookRead } from "@halo-dev/components";
+import { IconBookRead, IconCalendar } from "@halo-dev/components";
 import { definePlugin } from "@halo-dev/ui-shared";
 import { markRaw } from "vue";
 
 export default definePlugin({
   routes: [
+    {
+      path: "/publishing-calendar",
+      name: "PublishingCalendarRoot",
+      component: BasicLayout,
+      redirect: "/publishing-calendar/month",
+      meta: {
+        title: "core.post_calendar.title",
+        searchable: true,
+        permissions: ["system:posts:view"],
+        menu: {
+          name: /* @x18n-key */ "core.sidebar.menu.items.publishing_calendar",
+          group: "content",
+          icon: markRaw(IconCalendar),
+          priority: 1,
+          mobile: false,
+        },
+      },
+      children: [
+        {
+          path: "month",
+          name: "PublishingCalendar",
+          component: () => import("./calendar/ContentPublishCalendar.vue"),
+          meta: {
+            title: "core.post_calendar.title",
+            searchable: true,
+            permissions: ["system:posts:view"],
+          },
+        },
+      ],
+    },
     {
       path: "/posts",
       name: "PostsRoot",
@@ -27,6 +57,16 @@ export default definePlugin({
           path: "",
           name: "Posts",
           component: () => import("./PostList.vue"),
+        },
+        {
+          path: "calendar",
+          name: "PostsCalendar",
+          component: () => import("./calendar/ContentPublishCalendar.vue"),
+          meta: {
+            title: /* @x18n-key */ "core.post_calendar.title",
+            searchable: true,
+            permissions: ["system:posts:view"],
+          },
         },
         {
           path: "deleted",
