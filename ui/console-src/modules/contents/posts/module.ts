@@ -29,6 +29,16 @@ export default definePlugin({
           component: () => import("./PostList.vue"),
         },
         {
+          path: "calendar",
+          name: "PostPublishCalendar",
+          component: () => import("./calendar/CalendarView.vue"),
+          meta: {
+            title: /* @x18n-key */ "core.publish_calendar.title",
+            searchable: true,
+            permissions: ["system:posts:view"],
+          },
+        },
+        {
           path: "deleted",
           name: "DeletedPosts",
           component: () => import("./DeletedPostList.vue"),
