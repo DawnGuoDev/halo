@@ -323,7 +323,17 @@ test.describe("接口兼容与生成物一致性", () => {
     expect(fs.existsSync(openApiUcFile)).toBe(true);
     const ucSpec = JSON.parse(fs.readFileSync(openApiUcFile, "utf8")) as OpenApiDocument;
     expect(ucSpec.paths["/apis/api.uc.content.halo.run/v1alpha1/posts"], "user center path must exist").toBeDefined();
-    expect(JSON.stringify(ucSpec.components.schemas)).not.toContain("favorite");
+    // The UC API must not expose favorite-specific endpoints or query parameters.
+    for (const [path, methods] of Object.entries(ucSpec.paths)) {
+      expect(path, "UC must not expose a favorite sub-resource").not.toMatch(/\/favorite$/);
+      for (const method of Object.keys(methods)) {
+        const params = (methods as Record<string, { parameters?: Array<{ name: string }> }>)[method]?.parameters ?? [];
+        expect(
+          params.some((p) => p.name === "favorite"),
+          `UC ${method.toUpperCase()} ${path} must not accept a favorite parameter`
+        ).toBe(false);
+      }
+    }
   });
 });
 
