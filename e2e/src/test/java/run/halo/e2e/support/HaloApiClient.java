@@ -13,9 +13,17 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.crypto.Cipher;
 
 /**
  * Thin HTTP client for the real endpoints consumed by the E2E suites. Failures are reported with
@@ -36,6 +44,7 @@ public final class HaloApiClient {
 
     private final String baseUrl;
     private final HttpClient http;
+    private final HttpClient anonymousHttp;
     private final ObjectMapper json = new ObjectMapper();
 
     private final String username;
@@ -48,6 +57,9 @@ public final class HaloApiClient {
     private HaloApiClient(String baseUrl, HttpClient http, String username, String password) {
         this.baseUrl = baseUrl;
         this.http = http;
+        this.anonymousHttp = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
         this.username = username;
         this.password = password;
     }
@@ -57,12 +69,89 @@ public final class HaloApiClient {
         return new HaloApiClient(instance.baseUrl(), instance.newHttpClient());
     }
 
-    /** Basic-auth client for an already deployed instance (see {@code e2e.base.url}). */
+    /** Cookie-aware client for an already deployed instance (see {@code e2e.base.url}). */
     public static HaloApiClient forBaseUrl(String baseUrl) {
+        var cookieManager = new CookieManager();
+        cookieManager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
         var http = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
+                .cookieHandler(cookieManager)
                 .build();
         return new HaloApiClient(baseUrl.replaceAll("/+$", ""), http);
+    }
+
+    /**
+     * Logs in through the real form-login endpoint and keeps the session cookie in the client's
+     * {@link CookieManager}. This is necessary for deployed instances where Basic Auth may be
+     * disabled by the reverse proxy.
+     */
+    public RichResponse login() {
+        var loginPage = send("GET /login",
+                HttpRequest.newBuilder(URI.create(baseUrl + "/login"))
+                        .timeout(Duration.ofSeconds(60))
+                        .header("Accept", "text/html")
+                        .GET()
+                        .build());
+        if (loginPage.status() != 200) {
+            return loginPage;
+        }
+        var html = loginPage.body();
+        var csrf = extractInputValue(html, "_csrf");
+        var publicKey = extractPublicKey(html);
+        if (csrf == null || publicKey == null) {
+            return loginPage;
+        }
+        var encryptedPassword = encryptPassword(publicKey, password);
+        if (encryptedPassword == null) {
+            return loginPage;
+        }
+        var form = java.util.stream.Stream.of(
+                        "_csrf=" + encode(csrf),
+                        "username=" + encode(username),
+                        "password=" + encode(encryptedPassword),
+                        "remember-me=on")
+                .reduce((left, right) -> left + "&" + right)
+                .orElse("");
+        return send("POST /login",
+                HttpRequest.newBuilder(URI.create(baseUrl + "/login"))
+                        .timeout(Duration.ofSeconds(60))
+                        .header("Accept", "text/html")
+                        .header("Content-Type", "application/x-www-form-urlencoded")
+                        .POST(HttpRequest.BodyPublishers.ofString(form))
+                        .build());
+    }
+
+    private static String extractInputValue(String html, String name) {
+        var pattern = Pattern.compile("<input[^>]*name=\"" + Pattern.quote(name) + "\"[^>]*>");
+        var matcher = pattern.matcher(html);
+        if (!matcher.find()) {
+            return null;
+        }
+        var valueMatcher = Pattern.compile("value=\"([^\"]*)\"").matcher(matcher.group());
+        return valueMatcher.find() ? valueMatcher.group(1) : null;
+    }
+
+    private static String extractPublicKey(String html) {
+        var pattern = Pattern.compile("const publicKey\s*=\s*\"([^\"]+)\"");
+        var matcher = pattern.matcher(html);
+        if (!matcher.find()) {
+            return null;
+        }
+        return matcher.group(1).replace("\\/", "/").replace("\\\\", "\\");
+    }
+
+    private static String encryptPassword(String publicKeyText, String password) {
+        try {
+            var publicKeyBytes = Base64.getDecoder().decode(publicKeyText);
+            var keySpec = new X509EncodedKeySpec(publicKeyBytes);
+            var publicKey = KeyFactory.getInstance("RSA").generatePublic(keySpec);
+            var cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            cipher.init(Cipher.ENCRYPT_MODE, publicKey);
+            var encrypted = cipher.doFinal(password.getBytes(StandardCharsets.UTF_8));
+            return Base64.getEncoder().encodeToString(encrypted);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     public RichResponse setupSystem() {
@@ -82,14 +171,14 @@ public final class HaloApiClient {
                         "externalUrl=" + encode(baseUrl))
                 .reduce((left, right) -> left + "&" + right)
                 .orElse("");
-        return send("POST /system/setup", request("/system/setup", false)
+        return sendAnonymous("POST /system/setup", request("/system/setup", false)
                 .POST(HttpRequest.BodyPublishers.ofString(form))
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .build());
     }
 
     public RichResponse health() {
-        return send("GET /actuator/health",
+        return sendAnonymous("GET /actuator/health",
                 request("/actuator/health", false).GET().build());
     }
 
@@ -277,7 +366,7 @@ public final class HaloApiClient {
         body.put("content", content);
         body.put("allowNotification", false);
         body.put("hidden", false);
-        return send("POST anonymous public comment",
+        return sendAnonymous("POST anonymous public comment",
                 request(PUBLIC_COMMENTS, false)
                         .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
                         .header("Content-Type", "application/json")
@@ -319,7 +408,7 @@ public final class HaloApiClient {
     public boolean waitForCommentReviewMode(boolean expectApproved) {
         var deadline = System.nanoTime() + Duration.ofSeconds(60).toNanos();
         while (System.nanoTime() < deadline) {
-            var probe = send("POST anonymous comment (review probe)",
+            var probe = sendAnonymous("POST anonymous comment (review probe)",
                     request(PUBLIC_COMMENTS, false)
                             .POST(HttpRequest.BodyPublishers.ofString("{\"subjectRef\":{\"group\":\"content.halo.run\","
                                     + "\"version\":\"v1alpha1\",\"kind\":\"Post\",\"name\":\"e2e-review-probe\"},"
@@ -387,9 +476,12 @@ public final class HaloApiClient {
         if (keyword != null && !keyword.isBlank()) {
             query.append("&keyword=").append(encode(keyword));
         }
-        return send("GET public comments" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : "")
-                        + (authenticated ? "" : " anonymous"),
-                request(query.toString(), authenticated).GET().build());
+        if (authenticated) {
+            return send("GET public comments" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : ""),
+                    request(query.toString(), true).GET().build());
+        }
+        return sendAnonymous("GET public comments anonymous" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : ""),
+                request(query.toString(), false).GET().build());
     }
 
     /**
@@ -410,9 +502,12 @@ public final class HaloApiClient {
         if (keyword != null && !keyword.isBlank()) {
             query.append("&keyword=").append(encode(keyword));
         }
-        return send("GET public replies" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : "")
-                        + (authenticated ? "" : " anonymous"),
-                request(query.toString(), authenticated).GET().build());
+        if (authenticated) {
+            return send("GET public replies" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : ""),
+                    request(query.toString(), true).GET().build());
+        }
+        return sendAnonymous("GET public replies anonymous" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : ""),
+                request(query.toString(), false).GET().build());
     }
 
     /**
@@ -474,6 +569,19 @@ public final class HaloApiClient {
         return "Basic "
                 + Base64.getEncoder()
                         .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
+    }
+
+    private RichResponse sendAnonymous(String label, HttpRequest request) {
+        try {
+            var response = anonymousHttp.send(request, HttpResponse.BodyHandlers.ofString());
+            return new RichResponse(label, request, response);
+        } catch (IOException e) {
+            throw new AssertionError(
+                    "Request failed at step [" + label + "]: " + E2EConfig.sanitize(e.getMessage()), e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AssertionError("Interrupted at step [" + label + "]", e);
+        }
     }
 
     private RichResponse send(String label, HttpRequest request) {

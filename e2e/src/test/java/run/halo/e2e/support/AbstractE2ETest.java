@@ -37,17 +37,17 @@ public abstract class AbstractE2ETest {
                     "baseUrl=" + E2EConfig.BASE_URL + "\nmode=remote (e2e.base.url, not managed by the suite)"
                             + "\nadmin=" + E2EConfig.ADMIN_USERNAME);
             // A remote instance is normally already initialized, so the suite cannot create its
-            // account. Fail with an explicit BLOCKED instead of a puzzling assertion later.
-            var setup = api.setupSystem();
-            if (setup.status() == 302) {
-                var me = api.currentUser();
-                if (me.status() != 200) {
-                    throw blocked("remote instance " + E2EConfig.BASE_URL
-                            + " is already initialized and account [" + E2EConfig.ADMIN_USERNAME
-                            + "] cannot authenticate (GET current user -> " + me.status()
-                            + "). Provide -De2e.admin.username/-De2e.admin.password of an existing"
-                            + " admin, or target a fresh instance.", null);
-                }
+            // account. Log in through the real form endpoint and keep the session cookie; Basic
+            // Auth may be disabled by the reverse proxy.
+            api.setupSystem();
+            api.login();
+            var me = api.currentUser();
+            if (me.status() != 200) {
+                throw blocked("remote instance " + E2EConfig.BASE_URL
+                        + " is already initialized and account [" + E2EConfig.ADMIN_USERNAME
+                        + "] cannot authenticate (GET current user -> " + me.status()
+                        + "). Provide -De2e.admin.username/-De2e.admin.password of an existing"
+                        + " admin, or target a fresh instance.", null);
             }
             return;
         }
