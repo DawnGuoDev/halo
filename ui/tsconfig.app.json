@@ -1,6 +1,12 @@
 {
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["env.d.ts", "src/**/*", "uc-src/**/*", "console-src/**/*"],
+  "include": [
+    "env.d.ts",
+    "src/**/*",
+    "uc-src/**/*",
+    "console-src/**/*",
+    "preview/**/*"
+  ],
   "exclude": [
     "src/**/__tests__/*",
     "uc-src/**/__tests__/*",
@@ -13,6 +19,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "noImplicitAny": false,
     "noEmit": false,
+    "allowArbitraryExtensions": false,
     "paths": {
       "@/*": ["./src/*"],
       "@uc/*": ["./uc-src/*"],

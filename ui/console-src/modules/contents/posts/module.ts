@@ -1,6 +1,6 @@
 import BasicLayout from "@console/layouts/BasicLayout.vue";
 import BlankLayout from "@console/layouts/BlankLayout.vue";
-import { IconBookRead } from "@halo-dev/components";
+import { IconBookRead, IconCalendar } from "@halo-dev/components";
 import { definePlugin } from "@halo-dev/ui-shared";
 import { markRaw } from "vue";
 
@@ -80,6 +80,33 @@ export default definePlugin({
               },
             },
           ],
+        },
+      ],
+    },
+    {
+      path: "/content-calendar",
+      name: "ContentCalendarRoot",
+      component: BasicLayout,
+      meta: {
+        title: "core.content_calendar.title",
+        searchable: true,
+        permissions: ["system:posts:view"],
+        menu: {
+          name: /* @x18n-key */ "core.sidebar.menu.items.content_calendar",
+          group: "content",
+          icon: markRaw(IconCalendar),
+          priority: 2,
+          mobile: true,
+        },
+      },
+      children: [
+        {
+          path: "",
+          name: "ContentCalendar",
+          component: async () =>
+            (
+              await import("@console/modules/contents/calendar/ContentCalendar.vue")
+            ).default,
         },
       ],
     },

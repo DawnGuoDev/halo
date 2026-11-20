@@ -96,6 +96,13 @@ export default defineConfig(({ command, mode }) => ({
       input: {
         console: resolve(import.meta.dirname, "console.html"),
         uc: resolve(import.meta.dirname, "uc.html"),
+        // Self-contained preview entry for the content publication calendar.
+        // It reuses the console router and page source, and only isolates
+        // authentication + API fallback for static preview.
+        "content-calendar": resolve(
+          import.meta.dirname,
+          "preview/content-calendar.html"
+        ),
       },
       output: {
         codeSplitting: {
