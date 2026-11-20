@@ -26,19 +26,14 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 const value = ref("");
+// Native datetime-local inputs also update through `input` events that some
+// browsers fire without a v-model change; keep validation in sync explicitly.
+const touched = ref(false);
 const submitting = ref(false);
 const error = ref("");
 
 const isPublished = computed(() => props.post.published);
 const editable = computed(() => !isPublished.value && props.canManage);
-
-const minValue = computed(() => {
-  const date = new Date(Date.now() + 60 * 1000);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
-  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-});
 
 function toDatetimeLocal(value?: string) {
   if (!value) return "";
@@ -54,6 +49,7 @@ watch(
   () => props.post,
   (post) => {
     value.value = toDatetimeLocal(post.publishTime);
+    touched.value = false;
     error.value = "";
     submitting.value = false;
   },
@@ -62,6 +58,7 @@ watch(
 
 const validationError = computed(() => {
   if (!editable.value) return "";
+  if (!touched.value) return "";
   if (!value.value) return t("core.content_calendar.errors.required");
   const time = new Date(value.value).getTime();
   if (Number.isNaN(time)) return t("core.content_calendar.errors.invalid");
@@ -81,7 +78,13 @@ const canSubmit = computed(
     !submitting.value
 );
 
+function handleTimeInput(event: Event) {
+  value.value = (event.target as HTMLInputElement).value;
+  touched.value = true;
+}
+
 async function handleSave() {
+  touched.value = true;
   if (!canSubmit.value) return;
   submitting.value = true;
   error.value = "";
@@ -209,11 +212,12 @@ function handleClose() {
           </label>
           <input
             id="calendar-publish-time"
-            v-model="value"
+            :value="value"
             type="datetime-local"
-            :min="minValue"
+            step="60"
             class="block h-9 w-full rounded border px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             :class="validationError ? 'border-red-500' : 'border-gray-300'"
+            @input="handleTimeInput"
           />
           <p v-if="validationError" class="text-xs text-red-500">
             {{ validationError }}

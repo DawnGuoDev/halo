@@ -49,6 +49,21 @@ const app = createApp(RootApp);
 document.documentElement.style.height = "100%";
 document.body.style.height = "100%";
 document.body.style.overflow = "hidden";
+// Static previews may be mounted from a nested (origin=null) iframe or served
+// under a path prefix. Make the build's absolute `/ui-assets/...` references
+// relative to this page so styles and preloads resolve in those contexts.
+function relativizePreviewAssets() {
+  const baseUrl = new URL("./", window.location.href);
+  document.head.querySelectorAll('link[href^="/ui-assets/"]').forEach((el) => {
+    el.setAttribute("href", new URL(el.getAttribute("href")!, baseUrl).href);
+  });
+  document.body.querySelectorAll('script[src^="/ui-assets/"]').forEach((el) => {
+    el.setAttribute("src", new URL(el.getAttribute("src")!, baseUrl).href);
+  });
+}
+
+relativizePreviewAssets();
+
 setupI18n(app);
 setupVueQuery(app);
 setupComponents(app);
