@@ -30,13 +30,26 @@ public final class HaloApiClient {
     /** Public theme API for comments (no Basic Auth required for listing). */
     private static final String PUBLIC_COMMENTS = "/apis/api.halo.run/v1alpha1/comments";
 
+    /** Console system-config endpoint for the comment group (requireReviewForNew etc.). */
+    private static final String COMMENT_SETTING =
+            "/apis/console.api.halo.run/v1alpha1/systemconfigs/comment";
+
     private final String baseUrl;
     private final HttpClient http;
     private final ObjectMapper json = new ObjectMapper();
 
+    private final String username;
+    private final String password;
+
     public HaloApiClient(String baseUrl, HttpClient http) {
+        this(baseUrl, http, E2EConfig.ADMIN_USERNAME, E2EConfig.ADMIN_PASSWORD);
+    }
+
+    private HaloApiClient(String baseUrl, HttpClient http, String username, String password) {
         this.baseUrl = baseUrl;
         this.http = http;
+        this.username = username;
+        this.password = password;
     }
 
     /** Basic-auth client using the temporary instance administrator. */
@@ -238,6 +251,85 @@ public final class HaloApiClient {
                 .build());
     }
 
+    /** Creates a comment as an anonymous visitor (not auto-approved when review is required). */
+    public RichResponse createAnonymousComment(String raw, String content, String group, String version,
+            String kind, String subjectName) {
+        var body = json.createObjectNode();
+        body.putObject("subjectRef")
+                .put("group", group)
+                .put("version", version)
+                .put("kind", kind)
+                .put("name", subjectName);
+        body.put("raw", raw);
+        body.put("content", content);
+        body.put("allowNotification", false);
+        body.put("hidden", false);
+        return send("POST anonymous public comment",
+                request(PUBLIC_COMMENTS, false)
+                        .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                        .header("Content-Type", "application/json")
+                        .build());
+    }
+
+    /**
+     * Creates a regular (non-admin) user and returns a client authenticating as that user. Replies
+     * cannot be anonymous, and a regular user must not get the auto-approval granted to comment
+     * managers.
+     */
+    public HaloApiClient createRegularUserClient(String username, String password, String email) {
+        var body = json.createObjectNode();
+        body.put("name", username);
+        body.put("email", email);
+        body.put("displayName", username);
+        body.put("password", password);
+        var created = send("POST user " + username,
+                jsonRequest("/apis/api.console.halo.run/v1alpha1/users", body)
+                        .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                        .header("Content-Type", "application/json")
+                        .build());
+        if (created.status() != 200 && created.status() != 201) {
+            throw new AssertionError("Cannot create regular user: " + created);
+        }
+        var http = java.net.http.HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        return new HaloApiClient(baseUrl, http, username, password);
+    }
+
+    /**
+     * Waits until a newly created comment reflects the expected review behaviour. The system
+     * config is applied asynchronously by a reconciler, so the setting is not effective
+     * immediately after the update.
+     *
+     * @param expectApproved expected spec.approved of a comment created right now
+     */
+    public boolean waitForCommentReviewMode(boolean expectApproved) {
+        var deadline = System.nanoTime() + Duration.ofSeconds(60).toNanos();
+        while (System.nanoTime() < deadline) {
+            var probe = send("POST anonymous comment (review probe)",
+                    request(PUBLIC_COMMENTS, false)
+                            .POST(HttpRequest.BodyPublishers.ofString("{\"subjectRef\":{\"group\":\"content.halo.run\","
+                                    + "\"version\":\"v1alpha1\",\"kind\":\"Post\",\"name\":\"e2e-review-probe\"},"
+                                    + "\"raw\":\"probe\",\"content\":\"<p>probe</p>\","
+                                    + "\"allowNotification\":false,\"hidden\":false}"))
+                            .header("Content-Type", "application/json")
+                            .build());
+            if (probe.status() == 200) {
+                var approved = parse(probe).path("spec").path("approved").asBoolean(!expectApproved);
+                if (approved == expectApproved) {
+                    return true;
+                }
+            }
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
     /**
      * Creates a reply under the given comment through the public theme API. Authored by the admin,
      * so it is auto-approved.
@@ -267,6 +359,12 @@ public final class HaloApiClient {
      */
     public RichResponse listPublicComments(String group, String version, String subjectKind,
             String subjectName, String keyword) {
+        return listPublicComments(group, version, subjectKind, subjectName, keyword, true);
+    }
+
+    /** Lists public comments; {@code authenticated=false} sends an anonymous (visitor) request. */
+    public RichResponse listPublicComments(String group, String version, String subjectKind,
+            String subjectName, String keyword, boolean authenticated) {
         var query = new StringBuilder(PUBLIC_COMMENTS)
                 .append("?kind=").append(encode(subjectKind))
                 .append("&name=").append(encode(subjectName))
@@ -276,8 +374,9 @@ public final class HaloApiClient {
         if (keyword != null && !keyword.isBlank()) {
             query.append("&keyword=").append(encode(keyword));
         }
-        return send("GET public comments" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : ""),
-                jsonRequest(query.toString()).GET().build());
+        return send("GET public comments" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : "")
+                        + (authenticated ? "" : " anonymous"),
+                request(query.toString(), authenticated).GET().build());
     }
 
     /**
@@ -287,14 +386,36 @@ public final class HaloApiClient {
      * @param keyword     optional keyword; pass null or blank to skip
      */
     public RichResponse listPublicReplies(String commentName, String keyword) {
+        return listPublicReplies(commentName, keyword, true);
+    }
+
+    /** Lists public replies; {@code authenticated=false} sends an anonymous (visitor) request. */
+    public RichResponse listPublicReplies(String commentName, String keyword, boolean authenticated) {
         var query = new StringBuilder(PUBLIC_COMMENTS)
                 .append("/").append(encode(commentName))
                 .append("/reply?page=1&size=100");
         if (keyword != null && !keyword.isBlank()) {
             query.append("&keyword=").append(encode(keyword));
         }
-        return send("GET public replies" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : ""),
-                jsonRequest(query.toString()).GET().build());
+        return send("GET public replies" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : "")
+                        + (authenticated ? "" : " anonymous"),
+                request(query.toString(), authenticated).GET().build());
+    }
+
+    /**
+     * Switches the public "require review for new comments" system setting through the console
+     * system-config endpoint (the same one the console settings UI uses).
+     */
+    public RichResponse setCommentRequireReview(boolean required) {
+        var body = json.createObjectNode();
+        body.put("enable", true);
+        body.put("systemUserOnly", false);
+        body.put("requireReviewForNew", required);
+        return send("PUT comment system config requireReviewForNew=" + required,
+                jsonRequest(COMMENT_SETTING, body)
+                        .PUT(HttpRequest.BodyPublishers.ofString(body.toString()))
+                        .header("Content-Type", "application/json")
+                        .build());
     }
 
     public JsonNode parse(RichResponse response) {
@@ -339,8 +460,7 @@ public final class HaloApiClient {
     private String basicAuth() {
         return "Basic "
                 + Base64.getEncoder()
-                        .encodeToString((E2EConfig.ADMIN_USERNAME + ":" + E2EConfig.ADMIN_PASSWORD)
-                                .getBytes(StandardCharsets.UTF_8));
+                        .encodeToString((username + ":" + password).getBytes(StandardCharsets.UTF_8));
     }
 
     private RichResponse send(String label, HttpRequest request) {

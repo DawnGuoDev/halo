@@ -62,10 +62,11 @@ public class CommentSearchE2ETest extends AbstractE2ETest {
     @Description("""
             对当前分支构建的临时实例发起真实 HTTP 调用：
             1. 初始化系统并发布一篇文章
-            2. 通过公开 API 创建两条评论（raw 分别含/不含目标关键词）
-            3. 传入 keyword 时仅返回 raw 命中的评论
-            4. 空白 keyword 等价于未传，返回全部可见评论
-            5. 无匹配 keyword 返回空列表 total=0
+            2. 通过公开 API 创建两条已审核评论（raw 分别含/不含目标关键词）
+            3. 在“新评论需审核”生效时由匿名访客创建一条含关键词的待审核评论
+            4. 匿名访客传入 keyword 时仅返回 raw 命中的已审核评论，待审核评论不可见
+            5. 空白 keyword 等价于未传，返回全部可见评论
+            6. 无匹配 keyword 返回空列表 total=0
             """)
     public void shouldSearchPublicCommentsByKeyword() {
         setupSystem();
@@ -74,26 +75,42 @@ public class CommentSearchE2ETest extends AbstractE2ETest {
 
         var keyword = scope.token() + "-kw";
 
+        // With review required, comments posted now stay unapproved (invisible to visitors)
+        Assert.assertTrue(api.waitForCommentReviewMode(false),
+                "comment review mode must take effect before the unapproved scenario");
         var commentA = createComment(postName, "分享好用的" + keyword + "工具", "<p>分享</p>");
         var commentB = createComment(postName, "随便聊聊", "<p>闲聊</p>");
+        var pendingName = Assertions.requireText(api.parse(
+                api.createAnonymousComment("待审核也提到" + keyword, "<p>待审核</p>",
+                        POST_GROUP, POST_VERSION, POST_KIND, postName)), "metadata.name");
+        Assertions.assertStatusOneOf(api.setCommentRequireReview(false), 200, 204);
         var commentAName = Assertions.requireText(api.parse(commentA), "metadata.name");
         var commentBName = Assertions.requireText(api.parse(commentB), "metadata.name");
 
         // 1. keyword narrows to matching comment only
+        // Visitor view: anonymous request must never expose the unapproved comment
         var matched = api.parse(Assertions.assertStatus(
-                api.listPublicComments(POST_GROUP, POST_VERSION, POST_KIND, postName, keyword), 200));
+                api.listPublicComments(POST_GROUP, POST_VERSION, POST_KIND, postName, keyword, false), 200));
         var matchedNames = extractNames(matched);
+        Allure.addAttachment("anonymous-comment-search", "text/plain",
+                "keyword=" + keyword + "\nhits=" + matchedNames + "\ncommentA=" + commentAName
+                        + "\ncommentB=" + commentBName + "\nunapproved=" + pendingName);
         Assert.assertTrue(matchedNames.contains(commentAName),
                 "keyword match must contain comment A [" + commentAName + "], got: " + matchedNames);
         Assert.assertFalse(matchedNames.contains(commentBName),
                 "keyword match must not contain comment B [" + commentBName + "], got: " + matchedNames);
+        Assert.assertFalse(matchedNames.contains(pendingName),
+                "keyword match must not expose unapproved comment [" + pendingName + "], got: " + matchedNames);
         Assert.assertTrue(allRawContain(matched, keyword),
                 "all returned comments must contain the keyword in spec.raw");
+        Assert.assertEquals(matchedNames.size(), 1,
+                "keyword search for a unique token must return exactly one comment, got: " + matchedNames);
 
         // 2. blank keyword behaves like no keyword — both comments visible
         var blank = api.parse(Assertions.assertStatus(
                 api.listPublicComments(POST_GROUP, POST_VERSION, POST_KIND, postName, "  "), 200));
         var blankNames = extractNames(blank);
+        Allure.addAttachment("blank-keyword-comments", "text/plain", "hits=" + blankNames);
         Assert.assertTrue(blankNames.contains(commentAName),
                 "blank keyword should return comment A, got: " + blankNames);
         Assert.assertTrue(blankNames.contains(commentBName),
@@ -103,6 +120,7 @@ public class CommentSearchE2ETest extends AbstractE2ETest {
         var none = api.parse(Assertions.assertStatus(
                 api.listPublicComments(POST_GROUP, POST_VERSION, POST_KIND, postName,
                         keyword + "-no-such-thing"), 200));
+        Allure.addAttachment("unmatched-keyword-comments", "text/plain", "response=" + none.toString());
         Assert.assertEquals(none.path("total").asLong(-1), 0L, "unmatched keyword must return total=0");
         Assert.assertFalse(none.path("items").isArray() && none.path("items").size() > 0,
                 "unmatched keyword must return empty items");
@@ -118,11 +136,12 @@ public class CommentSearchE2ETest extends AbstractE2ETest {
     @Description("""
             对当前分支构建的临时实例发起真实 HTTP 调用：
             1. 初始化系统并发布一篇文章
-            2. 创建一条评论，再在其下创建两条回复（raw 分别含/不含目标关键词）
-            3. 传入 keyword 时仅返回 raw 命中的回复
-            4. 空白 keyword 等价于未传，返回全部可见回复
-            5. 无匹配 keyword 返回空列表 total=0
-            6. 回复搜索只返回指定评论下的回复
+            2. 创建一条已审核评论，再在其下创建两条已审核回复（raw 分别含/不含目标关键词）
+            3. 在“新评论需审核”生效时由普通登录用户创建一条含关键词的待审核回复
+            4. 匿名访客传入 keyword 时仅返回 raw 命中的已审核回复，待审核回复不可见
+            5. 空白 keyword 等价于未传，返回全部可见回复
+            6. 无匹配 keyword 返回空列表 total=0
+            7. 回复搜索只返回指定评论下的回复
             """)
     public void shouldSearchPublicRepliesByKeyword() {
         setupSystem();
@@ -134,21 +153,40 @@ public class CommentSearchE2ETest extends AbstractE2ETest {
         var comment = createComment(postName, "评论正文", "<p>评论</p>");
         var commentName = Assertions.requireText(api.parse(comment), "metadata.name");
 
+        Assertions.assertStatusOneOf(api.setCommentRequireReview(true), 200, 204);
+        Assert.assertTrue(api.waitForCommentReviewMode(false),
+                "comment review mode must take effect before the unapproved scenario");
         var replyA = createReply(commentName, "关于" + keyword + "的一句话", "<p>回复A</p>");
         var replyB = createReply(commentName, "其他内容", "<p>回复B</p>");
+        var visitor = api.createRegularUserClient("e2e-visitor-" + scope.token(), "E2eVisitor.1234",
+                "visitor@example.com");
+        var pendingReply = visitor.createReply(commentName, "待审核回复也提到" + keyword, "<p>待审核</p>");
+        Assert.assertFalse(visitor.parse(pendingReply).path("spec").path("approved").asBoolean(true),
+                "regular user reply must stay unapproved while review is required");
+        var pendingReplyName = Assertions.requireText(visitor.parse(pendingReply), "metadata.name");
+        Assertions.assertStatusOneOf(api.setCommentRequireReview(false), 200, 204);
         var replyAName = Assertions.requireText(api.parse(replyA), "metadata.name");
         var replyBName = Assertions.requireText(api.parse(replyB), "metadata.name");
 
         // 1. keyword narrows to matching reply only
+        // Visitor view: anonymous request must never expose the unapproved reply
         var matched = api.parse(Assertions.assertStatus(
-                api.listPublicReplies(commentName, keyword), 200));
+                api.listPublicReplies(commentName, keyword, false), 200));
         var matchedNames = extractNames(matched);
+        Allure.addAttachment("anonymous-reply-search", "text/plain",
+                "comment=" + commentName + "\nkeyword=" + keyword + "\nhits=" + matchedNames
+                        + "\nreplyA=" + replyAName + "\nreplyB=" + replyBName
+                        + "\nunapproved=" + pendingReplyName);
         Assert.assertTrue(matchedNames.contains(replyAName),
                 "keyword match must contain reply A [" + replyAName + "], got: " + matchedNames);
         Assert.assertFalse(matchedNames.contains(replyBName),
                 "keyword match must not contain reply B [" + replyBName + "], got: " + matchedNames);
+        Assert.assertFalse(matchedNames.contains(pendingReplyName),
+                "keyword match must not expose unapproved reply [" + pendingReplyName + "], got: " + matchedNames);
         Assert.assertTrue(allRawContain(matched, keyword),
                 "all returned replies must contain the keyword in spec.raw");
+        Assert.assertEquals(matchedNames.size(), 1,
+                "keyword search for a unique token must return exactly one reply, got: " + matchedNames);
 
         // 2. blank keyword behaves like no keyword
         var blank = api.parse(Assertions.assertStatus(
@@ -162,6 +200,7 @@ public class CommentSearchE2ETest extends AbstractE2ETest {
         // 3. no-match keyword returns empty list
         var none = api.parse(Assertions.assertStatus(
                 api.listPublicReplies(commentName, keyword + "-no-such-thing"), 200));
+        Allure.addAttachment("unmatched-keyword-replies", "text/plain", "response=" + none.toString());
         Assert.assertEquals(none.path("total").asLong(-1), 0L, "unmatched keyword must return total=0");
         Assert.assertFalse(none.path("items").isArray() && none.path("items").size() > 0,
                 "unmatched keyword must return empty items");
@@ -257,10 +296,10 @@ public class CommentSearchE2ETest extends AbstractE2ETest {
         if (!items.isArray() || items.isEmpty()) {
             return false;
         }
-        var lowerKeyword = keyword.toLowerCase(java.nio.charset.StandardCharsets.UTF_8);
+        var lowerKeyword = keyword.toLowerCase(java.util.Locale.ROOT);
         for (JsonNode item : items) {
             var raw = item.path("spec").path("raw").asText("");
-            if (!raw.toLowerCase(java.nio.charset.StandardCharsets.UTF_8).contains(lowerKeyword)) {
+            if (!raw.toLowerCase(java.util.Locale.ROOT).contains(lowerKeyword)) {
                 return false;
             }
         }
