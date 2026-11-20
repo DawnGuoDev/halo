@@ -19,8 +19,38 @@ public abstract class AbstractE2ETest {
 
     protected HaloApiClient api;
 
-    /** Starts an isolated instance; call from {@code @BeforeMethod}. */
+    /**
+     * Starts an isolated instance; call from {@code @BeforeMethod}. When {@code e2e.base.url} is
+     * set, the already deployed instance is used as-is instead (no lifecycle management, no
+     * cleanup): reachability is checked, and an already initialized instance must accept the
+     * configured {@code e2e.admin.username}/{@code e2e.admin.password}.
+     */
     protected final void startInstance() {
+        if (!E2EConfig.BASE_URL.isBlank()) {
+            api = HaloApiClient.forBaseUrl(E2EConfig.BASE_URL);
+            var health = api.health();
+            if (health.status() != 200) {
+                throw blocked("remote instance " + E2EConfig.BASE_URL + " is not ready: " + health.label()
+                        + " -> " + health.status(), null);
+            }
+            Allure.addAttachment("instance", "text/plain",
+                    "baseUrl=" + E2EConfig.BASE_URL + "\nmode=remote (e2e.base.url, not managed by the suite)"
+                            + "\nadmin=" + E2EConfig.ADMIN_USERNAME);
+            // A remote instance is normally already initialized, so the suite cannot create its
+            // account. Fail with an explicit BLOCKED instead of a puzzling assertion later.
+            var setup = api.setupSystem();
+            if (setup.status() == 302) {
+                var me = api.currentUser();
+                if (me.status() != 200) {
+                    throw blocked("remote instance " + E2EConfig.BASE_URL
+                            + " is already initialized and account [" + E2EConfig.ADMIN_USERNAME
+                            + "] cannot authenticate (GET current user -> " + me.status()
+                            + "). Provide -De2e.admin.username/-De2e.admin.password of an existing"
+                            + " admin, or target a fresh instance.", null);
+                }
+            }
+            return;
+        }
         instance = HaloInstance.create();
         try {
             instance.start();

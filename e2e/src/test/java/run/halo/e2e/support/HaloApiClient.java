@@ -57,6 +57,14 @@ public final class HaloApiClient {
         return new HaloApiClient(instance.baseUrl(), instance.newHttpClient());
     }
 
+    /** Basic-auth client for an already deployed instance (see {@code e2e.base.url}). */
+    public static HaloApiClient forBaseUrl(String baseUrl) {
+        var http = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        return new HaloApiClient(baseUrl.replaceAll("/+$", ""), http);
+    }
+
     public RichResponse setupSystem() {
         return setupSystem(null);
     }
@@ -78,6 +86,11 @@ public final class HaloApiClient {
                 .POST(HttpRequest.BodyPublishers.ofString(form))
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .build());
+    }
+
+    public RichResponse health() {
+        return send("GET /actuator/health",
+                request("/actuator/health", false).GET().build());
     }
 
     public RichResponse currentUser() {

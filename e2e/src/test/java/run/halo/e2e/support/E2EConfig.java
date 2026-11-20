@@ -13,14 +13,19 @@ import java.util.regex.Pattern;
  */
 public final class E2EConfig {
 
-    /** Temporary instance administrator. Not a real credential; never attached to reports. */
-    public static final String ADMIN_USERNAME = "e2e-admin";
+    /**
+     * Credentials used to initialize the (temporary or remote) instance and to sign in.
+     * Overridable with {@code -De2e.admin.username=...} / {@code -De2e.admin.password=...}
+     * (or {@code E2E_ADMIN_USERNAME} / {@code E2E_ADMIN_PASSWORD}) so a remote instance can be
+     * targeted with its own account. Defaults are throw-away local credentials.
+     */
+    public static final String ADMIN_USERNAME = get("e2e.admin.username", "e2e-admin");
 
-    public static final String ADMIN_PASSWORD = "E2eAdmin.1234";
+    public static final String ADMIN_PASSWORD = get("e2e.admin.password", "E2eAdmin.1234");
     /** Invalid by contract (hyphen is not allowed): setup must reject it without creating an admin. */
     public static final String WRONG_PASSWORD = "e2e-Admin.1234";
 
-    public static final String ADMIN_EMAIL = "e2e-admin@example.test";
+    public static final String ADMIN_EMAIL = get("e2e.admin.email", "e2e-admin@example.test");
 
     public static final String SITE_TITLE = "Halo E2E Site";
 
@@ -41,6 +46,14 @@ public final class E2EConfig {
 
     /** Optional path of an already installed Chromium, used instead of Playwright's own download. */
     public static final String CHROMIUM_EXECUTABLE_PATH = get("e2e.chromium.executable", "");
+
+    /**
+     * Optional base URL of an already deployed Halo instance. When set, the suites target that
+     * instance instead of starting a temporary one; the instance must be reachable and clean
+     * enough for the suite it runs (the backend comment suites need an initialized site and the
+     * {@code e2e-admin} account they create themselves).
+     */
+    public static final String BASE_URL = get("e2e.base.url", "");
 
     public static final boolean HEADED = Boolean.parseBoolean(get("e2e.headed", "false"));
 
