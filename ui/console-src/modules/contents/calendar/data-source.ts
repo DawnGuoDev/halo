@@ -11,6 +11,14 @@ import type { CalendarDataSource, CalendarPost } from "./types";
  */
 const deletedLabel = "content.halo.run/deleted=false";
 
+/**
+ * Mock source shared with the preview route. The preview never talks to a
+ * backend; `calendarPreviewConfig` is evaluated at runtime in the entry.
+ */
+function previewMock() {
+  return calendarPreviewConfig.mock ? mockCalendarDataSource : undefined;
+}
+
 function toCalendarPost(listed: ListedPost): CalendarPost {
   const post = listed.post;
   const labels = post.metadata?.labels || {};
@@ -75,8 +83,10 @@ function toDatetimeLocal(value?: string) {
 }
 
 export const realCalendarDataSource: CalendarDataSource = {
-  list: fetchAllPosts,
+  list: (signal) => previewMock()?.list(signal) ?? fetchAllPosts(signal),
   async reschedule(name, publishTime) {
+    const mock = previewMock();
+    if (mock) return mock.reschedule(name, publishTime);
     const { data: post } = await coreApiClient.content.post.getPost({ name });
     if (post.metadata.labels?.[postLabels.PUBLISHED] === "true") {
       throw new Error("POST_READ_ONLY");
@@ -102,6 +112,8 @@ export const realCalendarDataSource: CalendarDataSource = {
     });
   },
   async categories() {
+    const mock = previewMock();
+    if (mock) return mock.categories();
     const { data } = await consoleApiClient.content.category.listCategoryTree();
     const names: string[] = [];
     const walk = (nodes: CategoryTreeNode[]) => {

@@ -53,7 +53,15 @@ document.body.style.overflow = "hidden";
 // under a path prefix. Make the build's absolute `/ui-assets/...` references
 // relative to this page so styles and preloads resolve in those contexts.
 function relativizePreviewAssets() {
-  const baseUrl = new URL("./", window.location.href);
+  // Inline previews (about:srcdoc, origin=null) keep no absolute asset paths;
+  // the inlined build has none either, so skip when no base can be resolved.
+  let baseUrl: URL;
+  try {
+    baseUrl = new URL("./", window.location.href);
+  } catch {
+    return;
+  }
+  if (baseUrl.protocol !== "http:" && baseUrl.protocol !== "https:") return;
   document.head.querySelectorAll('link[href^="/ui-assets/"]').forEach((el) => {
     el.setAttribute("href", new URL(el.getAttribute("href")!, baseUrl).href);
   });
@@ -102,6 +110,10 @@ setupCoreModules({
 });
 
 function canUseHistory() {
+  // `about:srcdoc` (platform preview, origin=null) cannot build history state
+  // URLs at all; decide up front instead of probing `replaceState`, which
+  // leaves the router history half-initialised after the SecurityError.
+  if (window.location.protocol === "about:") return false;
   try {
     window.history.replaceState(window.history.state, "");
     return true;
