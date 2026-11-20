@@ -1273,7 +1273,6 @@
   "core.sudo.operations.confirm.toast_success": "身份确认成功",
   "core.sidebar.menu.items.content_calendar": "内容发布日历",
   "core.content_calendar.title": "内容发布日历",
-  "core.content_calendar.description": "以月历和列表查看文章排期，并调整待发布文章的发布时间。",
   "core.content_calendar.views.month": "月历",
   "core.content_calendar.views.list": "列表",
   "core.content_calendar.weekdays.mon": "周一",

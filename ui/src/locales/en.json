@@ -1273,7 +1273,6 @@
   "core.sudo.operations.confirm.toast_success": "Identity confirmed",
   "core.sidebar.menu.items.content_calendar": "Publication calendar",
   "core.content_calendar.title": "Publication calendar",
-  "core.content_calendar.description": "Review the publication schedule in month or list view and adjust planned publish times.",
   "core.content_calendar.views.month": "Month",
   "core.content_calendar.views.list": "List",
   "core.content_calendar.weekdays.mon": "Mon",

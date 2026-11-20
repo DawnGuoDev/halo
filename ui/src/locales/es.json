@@ -1273,7 +1273,6 @@
   "core.comment.list.fields.pending_reply_count": "{count} respuestas pendientes",
   "core.sidebar.menu.items.content_calendar": "Calendario de publicación",
   "core.content_calendar.title": "Calendario de publicación",
-  "core.content_calendar.description": "Consulta la programación en vista de mes o lista y ajusta las horas de publicación.",
   "core.content_calendar.views.month": "Mes",
   "core.content_calendar.views.list": "Lista",
   "core.content_calendar.weekdays.mon": "Lun",
