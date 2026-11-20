@@ -27,6 +27,9 @@ public final class HaloApiClient {
     private static final String CONSOLE_POSTS = "/apis/api.console.halo.run/v1alpha1/posts";
     private static final String CURRENT_USER = "/apis/uc.api.halo.run/v1alpha1/users/-";
 
+    /** Public theme API for comments (no Basic Auth required for listing). */
+    private static final String PUBLIC_COMMENTS = "/apis/api.halo.run/v1alpha1/comments";
+
     private final String baseUrl;
     private final HttpClient http;
     private final ObjectMapper json = new ObjectMapper();
@@ -209,6 +212,89 @@ public final class HaloApiClient {
                 .header("Authorization", "Basic " + token)
                 .GET()
                 .build());
+    }
+
+
+    /**
+     * Creates a comment on the given subject ref through the public theme API. The comment is
+     * authored by the authenticated admin user, so it is auto-approved (visible to anonymous
+     * visitors).
+     */
+    public RichResponse createComment(String raw, String content, String group, String version,
+            String kind, String subjectName) {
+        var body = json.createObjectNode();
+        body.putObject("subjectRef")
+                .put("group", group)
+                .put("version", version)
+                .put("kind", kind)
+                .put("name", subjectName);
+        body.put("raw", raw);
+        body.put("content", content);
+        body.put("allowNotification", true);
+        body.put("hidden", false);
+        return send("POST public comment", jsonRequest(PUBLIC_COMMENTS, body)
+                .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                .header("Content-Type", "application/json")
+                .build());
+    }
+
+    /**
+     * Creates a reply under the given comment through the public theme API. Authored by the admin,
+     * so it is auto-approved.
+     */
+    public RichResponse createReply(String commentName, String raw, String content) {
+        var body = json.createObjectNode();
+        body.put("raw", raw);
+        body.put("content", content);
+        body.put("allowNotification", true);
+        body.put("hidden", false);
+        return send("POST public reply for " + commentName,
+                jsonRequest(PUBLIC_COMMENTS + "/" + commentName + "/reply", body)
+                        .POST(HttpRequest.BodyPublishers.ofString(body.toString()))
+                        .header("Content-Type", "application/json")
+                        .build());
+    }
+
+    /**
+     * Lists comments from the public theme API. The request carries Basic Auth so the admin-created
+     * (auto-approved) comments are visible, but the endpoint itself is the public one.
+     *
+     * @param subjectKind   the GVK kind of the subject (e.g. "Post")
+     * @param subjectName   metadata.name of the subject
+     * @param group         the GVK group of the subject
+     * @param version       the GVK version of the subject
+     * @param keyword       optional keyword; pass null or blank to skip
+     */
+    public RichResponse listPublicComments(String group, String version, String subjectKind,
+            String subjectName, String keyword) {
+        var query = new StringBuilder(PUBLIC_COMMENTS)
+                .append("?kind=").append(encode(subjectKind))
+                .append("&name=").append(encode(subjectName))
+                .append("&version=").append(encode(version))
+                .append("&group=").append(encode(group))
+                .append("&page=1&size=100");
+        if (keyword != null && !keyword.isBlank()) {
+            query.append("&keyword=").append(encode(keyword));
+        }
+        return send("GET public comments" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : ""),
+                jsonRequest(query.toString()).GET().build());
+    }
+
+    /**
+     * Lists replies for a comment from the public theme API.
+     *
+     * @param commentName metadata.name of the parent comment
+     * @param keyword     optional keyword; pass null or blank to skip
+     */
+    public RichResponse listPublicReplies(String commentName, String keyword) {
+        var query = new StringBuilder(PUBLIC_COMMENTS)
+                .append("/").append(encode(commentName))
+                .append("/reply?page=1&size=100");
+        if (keyword != null && !keyword.isBlank()) {
+            query.append("&keyword=").append(encode(keyword));
+        }
+        return send("GET public replies" + (keyword != null && !keyword.isBlank() ? " keyword=" + keyword : ""),
+                jsonRequest(query.toString()).GET().build());
     }
 
     public JsonNode parse(RichResponse response) {

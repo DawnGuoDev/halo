@@ -5,6 +5,7 @@
         <classes>
             <class name="run.halo.e2e.backend.PostLifecycleE2ETest"/>
             <class name="run.halo.e2e.backend.AuthenticationE2ETest"/>
+            <class name="run.halo.e2e.backend.CommentSearchE2ETest"/>
         </classes>
     </test>
 </suite>
