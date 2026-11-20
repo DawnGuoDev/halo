@@ -8,6 +8,7 @@ import Gzip from "rollup-plugin-gzip";
 import Icons from "unplugin-icons/vite";
 import { defineConfig } from "vite-plus";
 import { configDefaults } from "vite-plus";
+import { announcementSingleFile } from "./src/vite/announcement-singlefile.ts";
 import { setupLibraryExternal } from "./src/vite/library-external.ts";
 import { devPlugin } from "./src/vite/plugin-dev.ts";
 
@@ -72,6 +73,7 @@ export default defineConfig(({ command, mode }) => ({
     VueI18n({
       include: [path.resolve(__dirname, "./src/locales/*.json")],
     }),
+    announcementSingleFile(),
     setupLibraryExternal(mode === "test" ? "test" : command, DEV_SERVER_PORT),
     devPlugin({ port: DEV_SERVER_PORT }),
   ],
@@ -93,10 +95,13 @@ export default defineConfig(({ command, mode }) => ({
     emptyOutDir: true,
     assetsDir: "ui-assets",
     rolldownOptions: {
-      input: {
-        console: resolve(import.meta.dirname, "console.html"),
-        uc: resolve(import.meta.dirname, "uc.html"),
-      },
+      input:
+        process.env.ANNOUNCEMENT_SINGLEFILE === "true"
+          ? { announcement: resolve(import.meta.dirname, "announcement.html") }
+          : {
+              console: resolve(import.meta.dirname, "console.html"),
+              uc: resolve(import.meta.dirname, "uc.html"),
+            },
       output: {
         codeSplitting: {
           groups: [
