@@ -406,28 +406,45 @@ public final class HaloApiClient {
      * @param expectApproved expected spec.approved of a comment created right now
      */
     public boolean waitForCommentReviewMode(boolean expectApproved) {
-        var deadline = System.nanoTime() + Duration.ofSeconds(60).toNanos();
+        var deadline = System.nanoTime() + Duration.ofSeconds(120).toNanos();
+        var configMatches = false;
         while (System.nanoTime() < deadline) {
-            var probe = sendAnonymous("POST anonymous comment (review probe)",
-                    request(PUBLIC_COMMENTS, false)
-                            .POST(HttpRequest.BodyPublishers.ofString("{\"subjectRef\":{\"group\":\"content.halo.run\","
-                                    + "\"version\":\"v1alpha1\",\"kind\":\"Post\",\"name\":\"e2e-review-probe\"},"
-                                    + "\"raw\":\"probe\",\"content\":\"<p>probe</p>\","
-                                    + "\"allowNotification\":false,\"hidden\":false}"))
-                            .header("Content-Type", "application/json")
-                            .build());
-            if (probe.status() == 200) {
-                var approved = parse(probe).path("spec").path("approved").asBoolean(!expectApproved);
-                if (approved == expectApproved) {
-                    return true;
+            var config = send("GET comment system config", jsonRequest(COMMENT_SETTING).GET().build());
+            if (config.status() == 200) {
+                var required = parse(config).path("requireReviewForNew").asBoolean(!expectApproved);
+                if (required == !expectApproved) {
+                    configMatches = true;
+                    break;
                 }
             }
             try {
-                Thread.sleep(500);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 return false;
             }
+        }
+        if (!configMatches) {
+            return false;
+        }
+        // Wait a moment for the config change to propagate before creating one probe comment.
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+        var probe = sendAnonymous("POST anonymous comment (review probe)",
+                request(PUBLIC_COMMENTS, false)
+                        .POST(HttpRequest.BodyPublishers.ofString("{\"subjectRef\":{\"group\":\"content.halo.run\","
+                                + "\"version\":\"v1alpha1\",\"kind\":\"Post\",\"name\":\"e2e-review-probe\"},"
+                                + "\"raw\":\"probe\",\"content\":\"<p>probe</p>\","
+                                + "\"allowNotification\":false,\"hidden\":false}"))
+                        .header("Content-Type", "application/json")
+                        .build());
+        if (probe.status() == 200) {
+            var approved = parse(probe).path("spec").path("approved").asBoolean(!expectApproved);
+            return approved == expectApproved;
         }
         return false;
     }

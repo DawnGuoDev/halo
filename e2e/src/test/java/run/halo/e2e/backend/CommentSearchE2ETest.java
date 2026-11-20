@@ -75,7 +75,9 @@ public class CommentSearchE2ETest extends AbstractE2ETest {
 
         var keyword = scope.token() + "-kw";
 
-        // With review required, comments posted now stay unapproved (invisible to visitors)
+        // With review required, comments posted now stay unapproved (invisible to visitors).
+        // A remote target is persistent, so the previous run may have left review disabled.
+        Assertions.assertStatusOneOf(api.setCommentRequireReview(true), 200, 204);
         Assert.assertTrue(api.waitForCommentReviewMode(false),
                 "comment review mode must take effect before the unapproved scenario");
         var commentA = createComment(postName, "分享好用的" + keyword + "工具", "<p>分享</p>");
