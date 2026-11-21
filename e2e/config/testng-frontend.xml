@@ -6,4 +6,9 @@
             <class name="run.halo.e2e.frontend.ConsolePostE2ETest"/>
         </classes>
     </test>
+    <test name="Announcement management flows">
+        <classes>
+            <class name="run.halo.e2e.frontend.AnnouncementManagementE2ETest"/>
+        </classes>
+    </test>
 </suite>
