@@ -48,15 +48,21 @@ export function announcementSingleFile(): Plugin {
         const src = m[1];
         if (!src.startsWith(ASSET_BASE)) continue;
         if (/announcement-[^/]+\.js$/.test(src)) {
+          // 业务入口 chunk 交给模块工厂处理，不按普通脚本直接执行。
           entrySrc = src;
           continue;
         }
+        if (src.endsWith("/defaultEntry.js") || /font|preload/i.test(src)) {
+          continue;
+        }
         const code = readAsset(src);
-        if (code !== undefined) libraries.push(code);
+        if (code === undefined) continue;
+        if (/^\s*import\s/.test(code)) {
+          continue;
+        }
+        libraries.push(code);
       }
       if (!entrySrc) return;
-      const entry = readAsset(entrySrc);
-      if (!entry) return;
 
       // 2) 业务入口的 import 依赖：用同名 chunk 的内联代码替换为模块工厂。
       const files = Object.values(bundle) as BundleFile[];
@@ -78,7 +84,10 @@ export function announcementSingleFile(): Plugin {
         if (code === undefined) return;
         transforms.set(name, "");
         const mods: string[] = [];
+        // 先替换 import.meta 再做 import 改写，避免替换产物被 import 正则误匹配。
+        const original = { code };
         const body = code
+          .replace(/import\.meta/g, "__ann_import_meta__")
           .replace(
             /import\s*\{([\s\S]*?)\}\s*from\s*(["'])([^"']+)\2\s*;?/g,
             (_w: string, names: string, _q: string, spec: string) => {
@@ -117,9 +126,42 @@ export function announcementSingleFile(): Plugin {
               return `__ann_require(${JSON.stringify(dep)});`;
             }
           )
-          .replace(/import\.meta/g, "({ url: window.location.href })");
+          .replace(
+            /import\s+([\w$]+)\s*(?:,\s*\{([\s\S]*?)\})?\s*from\s*(["'])([^"']+)\3\s*;?/g,
+            (
+              _w: string,
+              local: string,
+              names: string | undefined,
+              _q: string,
+              spec: string
+            ) => {
+              const dep = resolveDep(spec);
+              if (!dep) return _w;
+              visit(dep);
+              mods.push(dep);
+              const req = `__ann_require(${JSON.stringify(dep)})`;
+              const named = (names ?? "")
+                .split(",")
+                .map((part) => part.trim())
+                .filter(Boolean)
+                .join(", ");
+              if (!named) return `const ${local} = ${req};`;
+              const needsDefault = /\bdefault\b/.test(named);
+              const cleaned = named.replace(
+                /,\s*default\b|\bdefault\s*,\s*/g,
+                ""
+              );
+              if (!needsDefault) {
+                // 仅取 named 导出，不做 props 读取，避免访问未初始化模块工厂对象。
+                return `const {${cleaned}} = ${req};`;
+              }
+              return `const ${local} = ${req};const {${cleaned}} = ${local};`;
+            }
+          )
+          .split("__ann_import_meta__")
+          .join("({url: window.location.href, env: {}})");
         const exportNames: string[] = [];
-        const finalBody = body
+        let finalBody = body
           .replace(
             /export\s*\{([\s\S]*?)\}\s*;?/g,
             (_w: string, names: string) => {
@@ -147,13 +189,27 @@ export function announcementSingleFile(): Plugin {
               return `${kind} ${local}`;
             }
           );
+        const mark = `/*#ann-mod:${name}#*/`;
+        finalBody = mark + finalBody.split(mark).join("");
+        // 每个模块导出清单单独成行，避免上一条语句吞掉下一条（ASI）。
         transforms.set(
           name,
-          `__ann_define(${JSON.stringify(name)}, function () {\n${finalBody}\n;return {${exportNames.join(",")}};\n});\n` +
-            mods.join("")
+          `\n;__annslot(${JSON.stringify(name)},function () {\n${finalBody}\n;return {${exportNames.join(",")}};\n});\n` +
+            (mods.length ? `/*__dep:${JSON.stringify(mods)}:*/` : "") +
+            (body ===
+            original.code.replace(/import\.meta/g, "__ann_import_meta__")
+              ? ""
+              : `\n/*ann-has-import*/`)
         );
       };
-      const entryBase = entrySrc.replace(ASSET_BASE, "");
+      // 原始 HTML 的外链顺序不一定以业务入口结尾，优先按 chunk 图识别入口。
+      const entryBase =
+        Object.keys(bundle).find(
+          (key) =>
+            key.includes("ui-assets/announcement-") &&
+            key.endsWith(".js") &&
+            !chunks.get(key)?.includes("__vite__mapDeps")
+        ) ?? entrySrc.replace(ASSET_BASE, "");
       const entryKey = chunks.has(entryBase)
         ? entryBase
         : path.posix.basename(entryBase);
@@ -181,6 +237,7 @@ export function announcementSingleFile(): Plugin {
           return end >= 0 ? part.slice(end + 9) : "";
         })
         .join("");
+      // 经典脚本内嵌 JSON（如 ECharts 源码）会包含 U+2028/U+2029，首屏白屏的常见原因。
       html = html.replace(/\s+crossorigin(="[^"]*")?/g, "");
       html = html.replace('href="/ui-assets/favicon.ico"', 'href="data:,"');
       const headEnd = html.indexOf("</head>");
@@ -188,17 +245,81 @@ export function announcementSingleFile(): Plugin {
 
       // 运行时：经典脚本（非 module），宿主 IIFE + 模块工厂合并为单一脚本。
       // 启动器：经典脚本（允许约 10MB 以内代码），构建时把库与模块合并为单一脚本。
-      const merged = `${libraries.join("\n;\n")}\n;\nvar __ann_define = window.__ann_define;var __ann_require = window.__ann_require;\n${[
-        ...transforms.values(),
-      ].join(
-        "\n"
-      )}\nwindow.__module = __ann_require(${JSON.stringify(entryKey)});\nwindow.__announcement_ready = true;`;
-      const runtime = `(function(){var registry={};window.__ann_define=function(n,f){registry[n]=f;};window.__ann_require=function(n){if(!registry[n])throw new Error("单文件原型缺少模块："+n);if(registry[n].m)return registry[n].m;registry[n].m=registry[n].f();return registry[n].m;};try{${merged.replace(
-        /<\/script/gi,
-        "<\\/script"
-      )}}catch(error){window.__announcement_boot_error=String((error&&error.stack)||error);}})();`;
+      // 含 ESM 语法的宿主运行时与业务 chunk 统一走模块工厂；
+      // 先注册全部模块定义，再统一 require，避免循环依赖取到未初始化导出。
+      // 业务 chunk 产出顺序不稳定；入口模块最后定义，其余模块先定义再按需 require。
+      const entryBaseNameGuess = Object.keys(bundle).find(
+        (key) =>
+          key.includes("ui-assets/announcement-") &&
+          key.endsWith(".js") &&
+          !chunks.get(key)?.includes("__vite__mapDeps")
+      );
+      const entryGuessName = entryBaseNameGuess
+        ? path.posix.basename(entryBaseNameGuess)
+        : ((entrySrc ?? "").split("/").pop() ?? "");
+      const orderedNames = [...transforms.keys()].sort(
+        (a, b) => Number(a === entryGuessName) - Number(b === entryGuessName)
+      );
+      const defineOrder = orderedNames;
+      const moduleDefinitions = orderedNames
+        .map((name) => transforms.get(name) ?? "")
+        .join("\n");
+      const definedNames = [...transforms.values()].flatMap(
+        (value) => value.match(/\/\*#ann-mod:[^*]+#\*\//g) ?? []
+      );
+      if (defineOrder.length !== definedNames.length) {
+        throw new Error(
+          `announcement 单文件构建模块定义数量不一致：${defineOrder.length} != ${definedNames.length}`
+        );
+      }
+      // 宿主库各自包装为 IIFE，避免不同库的顶层声明互相覆盖。
+      const _hostScript = libraries
+        .map((code) => code.replace(/\r?\n/g, "\n"))
+        .map((code) => `;(function(){${code}\n})();`)
+        .join("\n//# sourceURL=announcement-host.js\n");
+
+      // HTML 解析器会优先识别脚本闭合标签；这里用拼接的 token 规避，
+      // 生成产物中不会出现能提前闭合脚本的字面量。
+      const SCRIPT_CLOSE = "<" + "/script";
+
+      const bootScript = [
+        "(function(){",
+        "var R = {};",
+        "window.__annRegistry = R;",
+        "window.__ann_define = function (name, factory) { R[name] = { factory: factory }; };",
+        "window.__ann_require = function (name) {",
+        "  var m = R[name];",
+        '  if (!m) throw new Error("单文件原型缺少模块：" + name);',
+        "  if (m.value) return m.value;",
+        "  m.value = m.factory();",
+        "  return m.value;",
+        "};",
+        "})();",
+      ].join("\n");
+      const toInlineScript = (code: string) =>
+        code.split("\u2028").join("\\u2028").split("\u2029").join("\\u2029");
+      const libraryScripts = libraries
+        .map((code) => code.replace(/<\/script/gi, "<\\/script"))
+        .map((code) => `<script>${toInlineScript(code)}</script>`)
+        .join("\n");
+      const moduleText = `${moduleDefinitions
+        .replace(/(?:\/\*__dep:[\s\S]*?:\*\/\n?)/g, "")
+        .split("__annslot(")
+        .join("__ann_define(")
+        .replace(/(\n)?(?=__ann_define\(")/g, "\n;")}\n;\n${defineOrder
+        .map((name) => `__ann_require(${JSON.stringify(name)});`)
+        .join(
+          "\n"
+        )}\n;\nwindow.__module = __ann_require(${JSON.stringify(entryKey)});\n;\nwindow.__announcement_ready = true;`;
+      // 以显式平台入口收尾：所有模块先统一定义，最后一次 require 触发挂载。
+      const moduleScript = toInlineScript(
+        `${moduleText}
+window.__ann_registry = window.__annRegistry;`
+          .split(SCRIPT_CLOSE)
+          .join("\\x3C/" + "script")
+      );
       const bodyEnd = html.lastIndexOf("</body>");
-      html = `${html.slice(0, bodyEnd)}<script>${runtime}</script>${html.slice(bodyEnd)}`;
+      html = `${html.slice(0, bodyEnd)}<script>${bootScript}</script>\n${libraryScripts}\n<script>${moduleScript}</script>${html.slice(bodyEnd)}`;
 
       await fsp.writeFile(
         path.join(outDir, "announcement-prototype.html"),
