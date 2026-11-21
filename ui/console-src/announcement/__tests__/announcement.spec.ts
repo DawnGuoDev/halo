@@ -133,6 +133,21 @@ describe("validateForm", () => {
     );
     expect(errors).toEqual({});
   });
+
+  it("结束时间早于当前时间不报错（发布后应为已结束）", () => {
+    const errors = validateForm(
+      {
+        title: "公告",
+        content: "正文",
+        position: "HOME_BANNER",
+        startTime: "2026-03-29T00:00",
+        endTime: "2026-03-30T00:00",
+      },
+      now
+    );
+    expect(errors).toEqual({});
+    expect(hasErrors(errors)).toBe(false);
+  });
 });
 
 describe("模拟数据覆盖", () => {

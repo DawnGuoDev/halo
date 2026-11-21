@@ -114,7 +114,7 @@ export function validateForm(
     startTime: string;
     endTime: string;
   },
-  now: Date = new Date()
+  _now: Date = new Date()
 ): AnnouncementFormErrors {
   const errors: AnnouncementFormErrors = {};
   if (!values.title.trim()) errors.title = "请输入公告标题";
@@ -128,13 +128,6 @@ export function validateForm(
     if (start >= end) {
       errors.endTime = "结束时间必须晚于开始时间";
     }
-  }
-  if (
-    !errors.endTime &&
-    values.endTime &&
-    new Date(values.endTime).getTime() < now.getTime()
-  ) {
-    errors.endTime = "结束时间不能早于当前时间，否则发布后将直接结束";
   }
   return errors;
 }
