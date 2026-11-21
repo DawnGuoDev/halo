@@ -81,6 +81,15 @@ function touch(field: keyof AnnouncementFormErrors) {
   revalidate();
 }
 
+// 原生 datetime-local 在部分浏览器只触发 input；输入后即时清除对应字段错误。
+function clearFieldError(field: keyof AnnouncementFormErrors) {
+  if (errors[field]) delete errors[field];
+}
+
+// 弹窗由父组件 v-if 挂载：visible 从 false→true 时复位一次，并把编辑对象写入表单。
+// 组件本身不依赖宿主渲染时机，避免编辑态首次打开为空表单。
+resetForm();
+
 watch(
   () => props.visible,
   (visible) => {
@@ -88,6 +97,13 @@ watch(
       resetForm();
       showPreview.value = true;
     }
+  }
+);
+
+watch(
+  () => props.announcement?.id,
+  () => {
+    resetForm();
   }
 );
 
@@ -101,11 +117,11 @@ watch(
 );
 watch(
   () => form.startTime,
-  () => touched.startTime && revalidate()
+  () => errors.startTime && touched.startTime && revalidate()
 );
 watch(
   () => form.endTime,
-  () => touched.endTime && revalidate()
+  () => errors.endTime && touched.endTime && revalidate()
 );
 
 const isEditing = computed(() => !!props.announcement);
@@ -277,6 +293,7 @@ function handleSubmit() {
                 type="datetime-local"
                 class="announcement-form__input"
                 :class="{ 'is-invalid': errors.startTime }"
+                @input="clearFieldError('startTime')"
                 @blur="touch('startTime')"
               />
               <p v-if="errors.startTime" class="announcement-form__error">
@@ -293,6 +310,7 @@ function handleSubmit() {
                 type="datetime-local"
                 class="announcement-form__input"
                 :class="{ 'is-invalid': errors.endTime }"
+                @input="clearFieldError('endTime')"
                 @blur="touch('endTime')"
               />
               <p v-if="errors.endTime" class="announcement-form__error">
