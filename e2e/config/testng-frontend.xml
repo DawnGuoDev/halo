@@ -4,6 +4,7 @@
     <test name="Console main flows">
         <classes>
             <class name="run.halo.e2e.frontend.ConsolePostE2ETest"/>
+            <class name="run.halo.e2e.frontend.PostListDensityE2ETest"/>
         </classes>
     </test>
 </suite>

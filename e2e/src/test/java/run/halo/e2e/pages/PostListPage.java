@@ -87,6 +87,84 @@ public final class PostListPage {
         return titleInput().inputValue();
     }
 
+    // ── Density switch ──────────────────────────────────────────────────────
+
+    /** The density radiogroup container rendered by {@code DensitySwitch.vue}. */
+    public Locator densitySwitch() {
+        return page.locator(
+                "[role=radiogroup][aria-label='阅读密度'], [role=radiogroup][aria-label='Reading density']");
+    }
+
+    public Locator densityOption(String value) {
+        return page.locator("input[name='post-list-density'][value='" + value + "']");
+    }
+
+    @Step("等待密度切换控件可见")
+    public PostListPage expectDensitySwitchVisible() {
+        assertThat(densitySwitch()).isVisible();
+        return this;
+    }
+
+    /** Checks the checked state of a density radio input. */
+    public boolean isDensityChecked(String value) {
+        return densityOption(value).isChecked();
+    }
+
+    /** Returns {@code true} when the post-list container has the compact modifier class. */
+    public boolean isCompactMode() {
+        return page.locator(".post-list.post-list--compact").count() > 0;
+    }
+
+    /** Returns {@code true} when the post-list container exists without the compact modifier. */
+    public boolean isComfortableMode() {
+        return page.locator(".post-list:not(.post-list--compact)").count() > 0;
+    }
+
+    @Step("切换到 {density} 密度")
+    public void switchDensity(String density) {
+        densityOption(density).click();
+    }
+
+    // ── Search ──────────────────────────────────────────────────────────────
+
+    /** The search input in the post list toolbar (FormKit text input named "keyword"). */
+    public Locator searchInput() {
+        return page.getByPlaceholder(
+                java.util.regex.Pattern.compile(".*(输入关键词搜索|Enter keywords to search).*")).first();
+    }
+
+    @Step("在搜索框中输入关键词并回车")
+    public void search(String keyword) {
+        searchInput().fill(keyword);
+        searchInput().press("Enter");
+    }
+
+    // ── Checkbox / batch ────────────────────────────────────────────────────
+
+    /** The per-row checkbox for a post whose title contains the given text. */
+    public Locator rowCheckbox(String title) {
+        return rowWithText(title).locator("input[name='post-checkbox']").first();
+    }
+
+    @Step("勾选标题包含 {title} 的文章")
+    public void checkPost(String title) {
+        rowCheckbox(title).check();
+    }
+
+    /** Returns the count of visible post rows in the list container. */
+    public int visibleRowCount() {
+        return page.locator(".post-list tr.entity-wrapper").count();
+    }
+
+    // ── Empty state ─────────────────────────────────────────────────────────
+
+    /** Whether the empty-state message is visible. */
+    public boolean isEmptyStateVisible() {
+        return page.getByText(
+                java.util.regex.Pattern.compile("^(当前没有文章|There are no posts currently.*)$"))
+                .count() > 0;
+    }
+
     /**
      * Title input of the default editor. It is matched by the i18n placeholder from
      * {@code core.components.default_editor.title_placeholder} ("请输入标题" / "Title"), avoiding
