@@ -39,6 +39,16 @@ export default definePlugin({
           },
         },
         {
+          path: "uncategorized-prototype",
+          name: "PostListUncategorizedPrototype",
+          component: () => import("./PostListUncategorizedPrototype.vue"),
+          meta: {
+            title: "文章列表未分类筛选原型",
+            searchable: false,
+            permissions: ["system:posts:view"],
+          },
+        },
+        {
           path: "editor",
           name: "PostEditor",
           component: () => import("./PostEditor.vue"),
