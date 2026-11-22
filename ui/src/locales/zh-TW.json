@@ -128,6 +128,7 @@
   "core.post.list.fields.views": "訪問量",
   "core.post.list.fields.comments": "留言 {comments}",
   "core.post.list.fields.pinned": "已置頂",
+  "core.post.list.title_display.expand": "展開長標題",
   "core.post.list.fields.schedule_publish.tooltip": "定時發佈",
   "core.post.list.fields.comments-with-pending": "({count} 條待審核)",
   "core.post.settings.title": "文章設置",

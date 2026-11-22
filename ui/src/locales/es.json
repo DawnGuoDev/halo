@@ -110,6 +110,7 @@
   "core.post.list.fields.views": "Visitas",
   "core.post.list.fields.comments": "{comments} Comentarios",
   "core.post.list.fields.pinned": "Fijado",
+  "core.post.list.title_display.expand": "Expandir títulos largos",
   "core.post.list.fields.schedule_publish.tooltip": "Programar publicación",
   "core.post.list.fields.comments-with-pending": " ({count} comentarios pendientes)",
   "core.post.settings.title": "Configuraciones",

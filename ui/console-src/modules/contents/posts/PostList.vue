@@ -19,6 +19,7 @@ import {
   VPageHeader,
   VPagination,
   VSpace,
+  VSwitch,
 } from "@halo-dev/components";
 import { useQuery } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
@@ -40,6 +41,10 @@ const settingModal = ref(false);
 const selectedPost = ref<Post>();
 const checkedAll = ref(false);
 const selectedPostNames = ref<string[]>([]);
+
+// Long-title display toggle. Page-memory only by design: it must not touch the
+// URL query, filters, pagination or selection, and resets on reload/navigation.
+const expandLongTitles = ref(false);
 
 provide<Ref<string[]>>("selectedPostNames", selectedPostNames);
 
@@ -529,6 +534,22 @@ watch(
                   ]"
                 />
               </VFilterDropdownGroup>
+              <button
+                :aria-pressed="expandLongTitles"
+                class="flex cursor-pointer items-center gap-2"
+                data-testid="post-long-title-toggle"
+                type="button"
+                @click="expandLongTitles = !expandLongTitles"
+              >
+                <VSwitch
+                  :aria-label="$t('core.post.list.title_display.expand')"
+                  :model-value="expandLongTitles"
+                  class="pointer-events-none"
+                />
+                <span class="select-none text-sm text-gray-600">
+                  {{ $t("core.post.list.title_display.expand") }}
+                </span>
+              </button>
               <div class="flex flex-row gap-2">
                 <button
                   v-tooltip="$t('core.common.buttons.refresh')"
@@ -578,6 +599,7 @@ watch(
             :key="post.post.metadata.name"
             :post="post"
             :is-selected="checkSelection(post.post)"
+            :expand-title="expandLongTitles"
             @open-setting-modal="handleOpenSettingModal"
           />
         </VEntityContainer>

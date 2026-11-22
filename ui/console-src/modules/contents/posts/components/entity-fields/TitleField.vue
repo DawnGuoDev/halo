@@ -14,8 +14,15 @@ import PostTag from "../../tags/components/PostTag.vue";
 const props = withDefaults(
   defineProps<{
     post: ListedPost;
+    /**
+     * Toolbar toggle: show long titles with up to three lines instead of one.
+     * Page-level state only; no API or preference change.
+     */
+    expandTitle?: boolean;
   }>(),
-  {}
+  {
+    expandTitle: false,
+  }
 );
 
 const { t } = useI18n();
@@ -57,6 +64,8 @@ const commentText = computed(() => {
       query: { name: post.post.metadata.name },
     }"
     max-width="30rem"
+    :expandable="expandTitle"
+    data-halo-post-title
   >
     <template #extra>
       <VSpace>

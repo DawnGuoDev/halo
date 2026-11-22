@@ -40,9 +40,11 @@ const props = withDefaults(
   defineProps<{
     post: ListedPost;
     isSelected?: boolean;
+    expandTitle?: boolean;
   }>(),
   {
     isSelected: false,
+    expandTitle: false,
   }
 );
 
@@ -176,6 +178,7 @@ const { data: fields } = useEntityFieldItemExtensionPoint<ListedPost>(
       component: markRaw(TitleField),
       props: {
         post: props.post,
+        expandTitle: props.expandTitle,
       },
     },
     {
