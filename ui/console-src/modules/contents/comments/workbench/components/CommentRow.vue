@@ -13,8 +13,9 @@ const props = withDefaults(
     subjectLabel: string;
     subjectTitle: string;
     subjectAvailable: boolean;
+    busy?: boolean;
   }>(),
-  {}
+  { busy: false }
 );
 
 const emit = defineEmits<{
@@ -58,7 +59,11 @@ const pendingReplyCount = computed(
   () => props.comment.comment.status?.pendingReplyCount || 0
 );
 const ownerInitial = computed(() =>
-  (props.comment.owner.displayName || props.comment.owner.name || "?")
+  (
+    props.comment.comment.spec.owner.displayName ||
+    props.comment.comment.spec.owner.name ||
+    "?"
+  )
     .slice(0, 1)
     .toUpperCase()
 );
@@ -83,7 +88,7 @@ function handleToggle(event: Event) {
     <template v-if="canManage" #checkbox>
       <input
         :checked="selected"
-        :aria-label="`选择 ${comment.owner.displayName || comment.owner.name} 的评论`"
+        :aria-label="`选择 ${comment.comment.spec.owner.displayName || comment.comment.spec.owner.name} 的评论`"
         :data-testid="`select-${comment.comment.metadata.name}`"
         type="checkbox"
         class="rounded border-gray-300"
@@ -109,17 +114,22 @@ function handleToggle(event: Event) {
                 <span
                   class="text-sm font-medium text-gray-900 hover:text-gray-700"
                 >
-                  {{ comment.owner.displayName || comment.owner.name }}
+                  {{
+                    comment.comment.spec.owner.displayName ||
+                    comment.comment.spec.owner.name
+                  }}
                 </span>
               </button>
               <span class="text-xs text-gray-400">
-                {{ comment.owner.kind === "User" ? "用户" : "访客" }}
+                {{
+                  comment.comment.spec.owner.kind === "User" ? "用户" : "访客"
+                }}
               </span>
               <VTag v-if="comment.comment.spec.hidden">私密</VTag>
               <span class="text-xs text-gray-400">评论在</span>
               <span
                 v-if="subjectAvailable"
-                class="inline-block max-w-[22rem] truncate text-sm text-gray-700"
+                class="inline-block max-w-[16rem] truncate text-sm text-gray-700"
                 :title="subjectTitle"
               >
                 {{ subjectLabel }}「{{ subjectTitle }}」
@@ -139,7 +149,7 @@ function handleToggle(event: Event) {
               <button
                 class="block w-full text-left"
                 type="button"
-                :aria-label="`查看完整评论：${comment.owner.displayName || comment.owner.name}`"
+                :aria-label="`查看完整评论：${comment.comment.spec.owner.displayName || comment.comment.spec.owner.name}`"
                 data-testid="comment-content"
                 @click="emit('open')"
               >
@@ -207,16 +217,38 @@ function handleToggle(event: Event) {
           </span>
         </template>
       </VEntityField>
-      <VEntityField width="96px" max-width="96px">
+      <VEntityField width="72px" max-width="72px">
         <template #description>
-          <VButton
-            v-if="canManage"
-            size="sm"
-            :data-testid="`open-${comment.comment.metadata.name}`"
-            @click="emit('open')"
-          >
-            查看
-          </VButton>
+          <div v-if="canManage" class="flex flex-col items-end gap-1">
+            <template v-if="status === 'pending'">
+              <VButton
+                size="sm"
+                type="secondary"
+                :loading="busy"
+                :data-testid="`approve-${comment.comment.metadata.name}`"
+                @click="emit('approve')"
+              >
+                通过
+              </VButton>
+              <VButton
+                size="sm"
+                type="danger"
+                :disabled="busy"
+                :data-testid="`reject-${comment.comment.metadata.name}`"
+                @click="emit('reject')"
+              >
+                驳回
+              </VButton>
+            </template>
+            <VButton
+              v-else
+              size="sm"
+              :data-testid="`open-${comment.comment.metadata.name}`"
+              @click="emit('open')"
+            >
+              查看
+            </VButton>
+          </div>
           <span v-else class="text-xs text-gray-400" data-testid="readonly-hint"
             >只读</span
           >
