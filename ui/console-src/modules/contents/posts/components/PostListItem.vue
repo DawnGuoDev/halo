@@ -16,6 +16,7 @@ import {
   type OperationItem,
 } from "@halo-dev/ui-shared";
 import { useQueryClient } from "@tanstack/vue-query";
+import { useClipboard } from "@vueuse/core";
 import type { Ref } from "vue";
 import { computed, inject, markRaw, ref, toRefs } from "vue";
 import { useI18n } from "vue-i18n";
@@ -72,6 +73,20 @@ const handleDelete = async () => {
   });
 };
 
+const { copy, isSupported } = useClipboard({ legacy: true });
+
+const handleCopyTitle = async () => {
+  const title = props.post.post.spec.title;
+
+  if (!isSupported.value) {
+    Toast.error(t("core.post.operations.copy_title.toast_failed"));
+    return;
+  }
+
+  await copy(title);
+  Toast.success(t("core.post.operations.copy_title.toast_success"));
+};
+
 const { data: operationItems } = useOperationItemExtensionPoint<ListedPost>(
   "post:list-item:operation:create",
   post,
@@ -117,6 +132,15 @@ const { data: operationItems } = useOperationItemExtensionPoint<ListedPost>(
         emit("open-setting-modal", props.post.post);
       },
     },
+    // BEGIN copy-title
+    {
+      priority: 25,
+      component: markRaw(VDropdownItem),
+      label: t("core.post.operations.copy_title.button"),
+      permissions: [],
+      action: handleCopyTitle,
+    },
+    // END copy-title
     {
       priority: 30,
       component: markRaw(VDropdownDivider),
