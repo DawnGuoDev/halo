@@ -1270,5 +1270,7 @@
   "core.sudo.operations.send_code.buttons.sending": "Sending",
   "core.sudo.operations.send_code.buttons.countdown": "Resend in {timer}s",
   "core.sudo.operations.send_code.toast_success": "Verification code sent",
-  "core.sudo.operations.confirm.toast_success": "Identity confirmed"
+  "core.sudo.operations.confirm.toast_success": "Identity confirmed",
+  "core.comment.workbench.title": "Comment moderation",
+  "core.comment.workbench.subtitle": "Global counts include pending, approved and rejected (approval cancelled). Batch review only affects selected top-level comments."
 }

@@ -1270,5 +1270,7 @@
   "core.sudo.operations.send_code.buttons.sending": "發送中",
   "core.sudo.operations.send_code.buttons.countdown": "{timer} 秒後可重發",
   "core.sudo.operations.send_code.toast_success": "驗證碼已發送",
-  "core.sudo.operations.confirm.toast_success": "身份確認成功"
+  "core.sudo.operations.confirm.toast_success": "身份確認成功",
+  "core.comment.workbench.title": "評論審核工作台",
+  "core.comment.workbench.subtitle": "全站統計包含待審核、已通過與已駁回（取消通過）。批量審核僅處理勾選的頂層評論。"
 }

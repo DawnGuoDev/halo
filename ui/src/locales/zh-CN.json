@@ -1270,5 +1270,7 @@
   "core.sudo.operations.send_code.buttons.sending": "发送中",
   "core.sudo.operations.send_code.buttons.countdown": "{timer} 秒后可重发",
   "core.sudo.operations.send_code.toast_success": "验证码已发送",
-  "core.sudo.operations.confirm.toast_success": "身份确认成功"
+  "core.sudo.operations.confirm.toast_success": "身份确认成功",
+  "core.comment.workbench.title": "评论审核工作台",
+  "core.comment.workbench.subtitle": "全站统计包含待审核、已通过与已驳回（取消通过）。批量审核仅处理勾选的顶层评论。"
 }
