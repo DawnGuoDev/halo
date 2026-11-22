@@ -83,6 +83,18 @@ public final class PostListPage {
         assertThat(rowWithText(text)).isAttached();
     }
 
+    /** Title field inside a post row, identified by the console's data attribute. */
+    public Locator titleField(String title) {
+        return page.locator("[data-halo-post-title]")
+                .filter(new Locator.FilterOptions().setHasText(title))
+                .first();
+    }
+
+    /** Number of selected post checkboxes on the current page. */
+    public int checkedCount() {
+        return page.locator("input[name=post-checkbox]:checked").count();
+    }
+
     public String titleValue() {
         return titleInput().inputValue();
     }
