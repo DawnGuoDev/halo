@@ -24,17 +24,30 @@ import { useQuery } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
 import { chunk } from "es-toolkit";
 import type { Ref } from "vue";
-import { provide, ref, watch } from "vue";
+import { computed, provide, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import CategoryFilterDropdown from "@/components/filter/CategoryFilterDropdown.vue";
 import TagFilterDropdown from "@/components/filter/TagFilterDropdown.vue";
 import UserFilterDropdown from "@/components/filter/UserFilterDropdown.vue";
 import { postLabels } from "@/constants/labels";
+import DensitySwitch from "./components/DensitySwitch.vue";
 import PostBatchSettingModal from "./components/PostBatchSettingModal.vue";
 import PostListItem from "./components/PostListItem.vue";
 import PostSettingModal from "./components/PostSettingModal.vue";
+import { DENSITY_INJECTION_KEY, type PostListDensity } from "./density";
 
 const { t } = useI18n();
+
+/**
+ * 阅读密度（紧凑/舒适）：仅页面内存状态。
+ *
+ * - 不写 URL、不写 localStorage，刷新后恢复默认。
+ * - 不参与列表请求参数，切换时不触发重新请求。
+ * - 只通过列表容器上的修饰类作用于文章列表区域，不修改全局 Entity 样式。
+ */
+const density = ref<PostListDensity>("comfortable");
+const isCompact = computed(() => density.value === "compact");
+provide(DENSITY_INJECTION_KEY, { density });
 
 const settingModal = ref(false);
 const selectedPost = ref<Post>();
@@ -530,6 +543,7 @@ watch(
                 />
               </VFilterDropdownGroup>
               <div class="flex flex-row gap-2">
+                <DensitySwitch />
                 <button
                   v-tooltip="$t('core.common.buttons.refresh')"
                   type="button"
@@ -572,15 +586,22 @@ watch(
         </VEmpty>
       </Transition>
       <Transition v-else appear name="fade">
-        <VEntityContainer>
-          <PostListItem
-            v-for="post in posts"
-            :key="post.post.metadata.name"
-            :post="post"
-            :is-selected="checkSelection(post.post)"
-            @open-setting-modal="handleOpenSettingModal"
-          />
-        </VEntityContainer>
+        <div
+          :class="{
+            'post-list': true,
+            'post-list--compact': isCompact,
+          }"
+        >
+          <VEntityContainer>
+            <PostListItem
+              v-for="post in posts"
+              :key="post.post.metadata.name"
+              :post="post"
+              :is-selected="checkSelection(post.post)"
+              @open-setting-modal="handleOpenSettingModal"
+            />
+          </VEntityContainer>
+        </div>
       </Transition>
 
       <template #footer>
@@ -599,3 +620,21 @@ watch(
     </VCard>
   </div>
 </template>
+
+<style lang="scss">
+.post-list {
+  --post-list-cell-padding-y: 0.75rem;
+
+  .entity-wrapper {
+    .entity-start-wrapper,
+    .entity-end-wrapper {
+      padding-top: var(--post-list-cell-padding-y);
+      padding-bottom: var(--post-list-cell-padding-y);
+    }
+  }
+
+  &.post-list--compact {
+    --post-list-cell-padding-y: 0.25rem;
+  }
+}
+</style>
