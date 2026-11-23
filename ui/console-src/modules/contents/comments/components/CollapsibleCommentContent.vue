@@ -2,9 +2,14 @@
 import { computed, onBeforeUnmount, onMounted, ref, useId } from "vue";
 import { useContentProviderExtensionPoint } from "../composables/use-content-provider-extension-point";
 
-defineProps<{
-  content?: string;
-}>();
+withDefaults(
+  defineProps<{
+    content?: string;
+  }>(),
+  {
+    content: "",
+  }
+);
 
 const COLLAPSED_MAX_HEIGHT = 200;
 const FADE_HEIGHT = 48;

@@ -40,7 +40,7 @@ export default definePlugin({
         {
           path: "",
           name: "Comments",
-          component: () => import("./CommentList.vue"),
+          component: () => import("./ModerationWorkbench.vue"),
         },
       ],
     },

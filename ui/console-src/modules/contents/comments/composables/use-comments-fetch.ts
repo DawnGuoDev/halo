@@ -10,7 +10,8 @@ export default function useCommentsFetch(
   sort: Ref<string | undefined>,
   user: Ref<string | undefined>,
   keyword: Ref<string | undefined>,
-  subjectRefKey?: Ref<string | undefined>
+  subjectRefKey?: Ref<string | undefined>,
+  options: { enabled?: Ref<boolean> } = {}
 ) {
   return useQuery<ListedCommentList>({
     queryKey: [
@@ -54,6 +55,7 @@ export default function useCommentsFetch(
 
       return data;
     },
+    enabled: options.enabled,
     refetchInterval(data) {
       const hasDeletingData = data?.items.some(
         (comment) => !!comment.comment.metadata.deletionTimestamp

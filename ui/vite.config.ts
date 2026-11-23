@@ -95,6 +95,7 @@ export default defineConfig(({ command, mode }) => ({
     rolldownOptions: {
       input: {
         console: resolve(import.meta.dirname, "console.html"),
+        preview: resolve(import.meta.dirname, "preview.html"),
         uc: resolve(import.meta.dirname, "uc.html"),
       },
       output: {
