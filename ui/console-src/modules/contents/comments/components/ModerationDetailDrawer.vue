@@ -14,7 +14,6 @@ import CommentEditor from "./CommentEditor.vue";
 import DefaultCommentContent from "./DefaultCommentContent.vue";
 
 const props = defineProps<{
-  visible?: boolean;
   item: ModerationItemView;
   detail: PreviewComment | undefined;
   processing?: boolean;
@@ -26,7 +25,6 @@ const props = defineProps<{
 const { t } = useI18n();
 
 const emit = defineEmits<{
-  (e: "update:visible", value: boolean): void;
   (e: "close"): void;
   (e: "approve"): void;
   (e: "reject"): void;
@@ -87,13 +85,11 @@ function formatTime(value: string) {
 
 <template>
   <VModal
-    :visible="visible"
     :title="`评论详情`"
     :width="760"
     :body-class="['!p-0']"
     mount-to-body
     :centered="false"
-    @update:visible="emit('update:visible', $event)"
     @close="emit('close')"
   >
     <div
@@ -275,10 +271,10 @@ function formatTime(value: string) {
         </div>
         <div class="flex items-center gap-2" data-testid="detail-next">
           <template v-if="remainingPending > 0">
-            <span class="text-xs text-gray-500"
+            <span class="text-xs text-gray-500" data-testid="remaining-pending"
               >还有 {{ remainingPending }} 条待审核</span
             >
-            <VButton type="primary" @click="emit('next')">
+            <VButton type="primary" data-testid="go-next" @click="emit('next')">
               下一条待审核
               <IconArrowRight class="ml-1 inline h-3.5 w-3.5" />
             </VButton>

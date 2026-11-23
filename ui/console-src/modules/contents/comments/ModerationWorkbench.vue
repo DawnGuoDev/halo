@@ -294,11 +294,19 @@ const detailOpen = ref(false);
 const drawerName = ref<string | undefined>();
 const processingName = ref<string | undefined>();
 
-const drawerItem = computed(() =>
-  items.value.find(
+const drawerItem = computed(() => {
+  if (!drawerName.value) {
+    return undefined;
+  }
+  if (preview.value) {
+    // The drawer follows a comment across pages, so resolve it from the whole
+    // filtered dataset instead of only the current page slice.
+    return moderation.findFilteredItem(drawerName.value);
+  }
+  return items.value.find(
     (item) => item.listed.comment.metadata.name === drawerName.value
-  )
-);
+  );
+});
 const drawerDetail = computed(() =>
   preview.value && drawerName.value
     ? moderation.getPreviewComment(drawerName.value)
@@ -308,13 +316,10 @@ const remainingPending = computed(() => {
   if (!drawerName.value) {
     return 0;
   }
-  return preview.value
-    ? Math.max(
-        0,
-        moderation.stats.value.pending -
-          (drawerItem.value?.status === "pending" ? 1 : 0)
-      )
-    : Math.max(0, (realComments.value?.total ?? 0) - 1);
+  if (preview.value) {
+    return moderation.pendingCountExcluding(drawerName.value);
+  }
+  return Math.max(0, (realComments.value?.total ?? 0) - 1);
 });
 
 function openDetail(name: string) {
@@ -494,8 +499,21 @@ function goNextPending() {
     Toast.info(t("core.comment.moderation.toast.next_real_hint"));
     return;
   }
-  const next = moderation.nextPendingAfter(drawerName.value);
+  const next = moderation.nextPendingInFilter(drawerName.value);
   if (next) {
+    // Keep the page in sync when the next pending comment lives on another page.
+    const index = moderation.items.value.findIndex(
+      (item) =>
+        item.listed.comment.metadata.name === next.listed.comment.metadata.name
+    );
+    if (index === -1) {
+      const allIndex = moderation.filteredIndex(
+        next.listed.comment.metadata.name
+      );
+      if (allIndex >= 0) {
+        page.value = Math.floor(allIndex / size.value) + 1;
+      }
+    }
     openDetail(next.listed.comment.metadata.name);
   }
 }
@@ -948,7 +966,6 @@ function refresh() {
 
     <ModerationDetailDrawer
       v-if="drawerItem"
-      v-model:visible="detailOpen"
       :item="drawerItem"
       :detail="drawerDetail"
       :processing="processingName === drawerItem.listed.comment.metadata.name"

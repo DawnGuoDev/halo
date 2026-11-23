@@ -118,9 +118,9 @@ export function useCommentModeration(
   const keywordRef = toRef(filters, "keyword");
   const statusRef = toRef(filters, "status");
   const subjectKindRef = toRef(filters, "subjectKind");
-  const filtered = computed(filteredAll);
+  const filtered = computed(() => baseFilteredAll());
 
-  function filteredAll(): PreviewComment[] {
+  function baseFilteredAll(): PreviewComment[] {
     return sortByCreatedAtDesc(
       comments.filter((item) => {
         if (unref(options.preview) && scenario.value === "pending-empty") {
@@ -390,6 +390,44 @@ export function useCommentModeration(
     return current;
   }
 
+  /** Resolve any comment of the current filter, regardless of the page. */
+  function findFilteredItem(name: string): ModerationItemView | undefined {
+    const item = filtered.value.find(
+      (entry) => entry.listed.comment.metadata.name === name
+    );
+    return item ? moderationItemView(item) : undefined;
+  }
+
+  function moderationItemView(item: PreviewComment): ModerationItemView {
+    return {
+      listed: item.listed,
+      status: item.status,
+      subjectKind: subjectKindOf(item),
+      subjectMissing: item.subjectMissing,
+    };
+  }
+
+  /** Next pending comment in sort order, across all pages. */
+  function nextPendingInFilter(name: string): ModerationItemView | undefined {
+    const next = nextPendingAfter(name);
+    return next ? moderationItemView(next) : undefined;
+  }
+
+  /** Zero-based position inside the current filter, across all pages. */
+  function filteredIndex(name: string) {
+    return filtered.value.findIndex(
+      (item) => item.listed.comment.metadata.name === name
+    );
+  }
+
+  /** Number of pending comments in the current filter, excluding `name`. */
+  function pendingCountExcluding(name: string) {
+    return filtered.value.filter(
+      (item) =>
+        item.status === "pending" && item.listed.comment.metadata.name !== name
+    ).length;
+  }
+
   function nextPendingAfter(name: string) {
     const list = sortByCreatedAtDesc(
       comments.filter((item) => {
@@ -473,6 +511,10 @@ export function useCommentModeration(
     lastOutcome,
     clearProcessedOutcome,
     nextPendingAfter,
+    findFilteredItem,
+    nextPendingInFilter,
+    pendingCountExcluding,
+    filteredIndex,
     getPreviewComment,
     isValidStatusForAction,
   };
