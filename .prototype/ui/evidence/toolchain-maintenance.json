@@ -1,0 +1,38 @@
+{
+  "scope": "portable summary, not raw reports; macOS arm64 only",
+  "toolPolicy": "repository requirements only; compatible installed tools first",
+  "pythonRegression": [
+    "Python 3.9.6: 7 passed",
+    "current Python: 7 passed"
+  ],
+  "environment": "frozen-lock setup passed; existing compatible cached tools reused",
+  "build": {
+    "status": "passed",
+    "sourceHash": "084019f97dc406b0e7e3acb313e5aae8e1f39d3c3f3841b1036543bb9ab35f0e",
+    "entryHash": "d4d6ccd9efd5062fc3eab9437ac9a565b9e3567ba3460bb8dd4bd318b9bcac48"
+  },
+  "browser": {
+    "status": "passed",
+    "modes": [
+      {
+        "mode": "standalone",
+        "status": "passed",
+        "origin": "http://127.0.0.1:58949",
+        "errors": []
+      },
+      {
+        "mode": "iframe-srcdoc",
+        "status": "passed",
+        "origin": "null",
+        "errors": []
+      }
+    ],
+    "reportPath": ".workbench/browser-cdp/report.json"
+  },
+  "unverified": [
+    "Linux sandbox acquisition",
+    "actual platform iframe",
+    "full application suites"
+  ],
+  "note": "The HTML bytes are unchanged; no business page behavior changed."
+}

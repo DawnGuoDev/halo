@@ -1,4 +1,6 @@
 {
-  "node": "24.22.3",
-  "note": "Validated preview runtime; pnpm comes from ui/package.json. Node must still satisfy engines.node. Official Node SHA256 and npm SHA512 are checked before extraction."
+  "policy": "repository-requirements-first",
+  "nodeRequirementSource": "ui/package.json#engines.node",
+  "packageManagerSource": "ui/package.json#packageManager",
+  "acquisition": "Reuse compatible PATH/cache tools; only prepare downloads an official compatible LTS when necessary. Actual chosen versions are environment evidence, not extra constraints."
 }

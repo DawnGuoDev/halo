@@ -47,3 +47,12 @@
 - `preview.py build` 先检查预览 vue-tsc 和 ESLint，再编译/装配；转译成功不代表类型正确。
 - `preview.py browser` 先 verify 当前构建，再选择现成 Playwright 或共享 CDP。没有浏览器就明确失败，不新造客户端。
 - hover/portal 导致一次点击未生效，先保留用例与原始结果做对照，不能直接归因 CDP。临时驱动的 WebSocket/contextId 错误不等于业务页面有缺陷，工具问题转维护。
+
+## 工具实测版本不能变成额外环境门槛（2026-11-24）
+
+- 症状：业务节点从主干开始调查 Corepack 私有缓存，人工提供预览分支后才读取已有指南；setup 全量重定向使网页看不到下载阶段。另有 Python 3.12+ 文档要求，来自辅助解压 API，而非前端工程。
+- 修正：Node 仅遵守 ui/package.json 的 engines；复用 PATH/缓存中的兼容 Node，不另锁补丁版本。pnpm 仍严格遵循仓库 packageManager。缺工具才获取官方兼容版本；保存实际选择而非新增版本约束。下载输出字节进度并限时，setup 不要整段隐藏输出。
+- 安全解压按能力选择 tarfile.data_filter；旧 Python 的实现先校验全归档路径、链接和文件类型，再解压。不能通过去掉路径保护兼容旧环境。
+- 复验：现有 Python 3.9.6 与当前 Python 均通过 7 项回归；setup 冻结锁安装、前端 scoped checks/build、导出与浏览器报告以本轮 evidence 为准。Linux 下载恢复仍须在实际沙箱验证。
+- 使用：`python3 -m unittest discover -s scripts/prototype -p test_runtime.py`；`bash scripts/prototype/setup.sh`；依指南运行 build 和 browser。
+- 关联仍需平台同步：registry 位于预览分支，不自动使主干发现分支。给产品设计节点投递仓库/应用/预览分支/profile 与验证提交；缺少关联不应重新造基座。

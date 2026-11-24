@@ -13,7 +13,7 @@
 
 ## 新沙箱准备
 
-前置：Python **3.12+**（使用 tarfile 的安全 data filter）、POSIX shell、Git、访问 Node 官方及 npm 官方源的 HTTPS 网络。支持的工具下载目标为 macOS/Linux 的 arm64/x64；本轮实测为 macOS arm64。Linux 沙箱恢复须在平台实际验证，不能把本地结果当 Linux 已通过。
+前置：环境已有的 Python 3（安全解压按能力选择实现，不要求安装 Python 3.12）、POSIX shell、Git、访问 Node 官方及 npm 官方源的 HTTPS 网络。支持的工具下载目标为 macOS/Linux 的 arm64/x64；本轮实测为 macOS arm64。Linux 沙箱恢复须在平台实际验证，不能把本地结果当 Linux 已通过。
 
 ```bash
 # 先静态检查配方/cwd/安装叶子；不安装、不改 PATH
@@ -26,11 +26,11 @@ bash scripts/prototype/setup.sh
 bash scripts/prototype/setup.sh --check
 ```
 
-Node 固定为 `.prototype/ui/toolchain.json` 的已验证版本（当前 24.22.3），仍需满足 `ui/package.json` engines；pnpm 精确版本只读取 `ui/package.json` 的 `packageManager`（当前 12.4.2）。更新约束时作为基座维护验证，不修改锁或 engine 来迁就环境。
+Node 约束只读取 `ui/package.json` 的 `engines.node`；优先复用 PATH 或预览缓存中满足范围的实际 Node，不额外锁补丁版本。仅缺少兼容版本时，setup 从官方发布索引选择满足范围的 LTS 并校验下载。pnpm 精确版本来自仓库 `packageManager`（当前 12.4.2），不是预览工具另定的版本。实际工具路径和版本保存在忽略目录的选择记录与环境回执，不能当通用最低版本。
 
-工具保存在忽略的 `.prototype/tools/`，Node/pnpm 缓存按版本、OS、架构隔离。可通过 `PROTOTYPE_TOOLS_DIR` 指定独立缓存。Node 压缩包使用官方 SHA256 校验；pnpm npm 包使用官方元数据 SHA512，官方 pnpm JS 引导器负责首次取得其原生二进制。所有下载只发生在 `prepare/setup`，`check/run/build/browser` 不下载工具。不依赖 Corepack shim，也不读取其私人缓存结构，不修改用户全局 Node、pnpm 或 shell 配置。
+工具保存在忽略的 `.prototype/tools/`，Node/pnpm 缓存按版本、OS、架构隔离。可通过 `PROTOTYPE_TOOLS_DIR` 指定独立缓存。Node 压缩包使用官方 SHA256 校验；pnpm npm 包使用官方元数据 SHA512，官方 pnpm JS 引导器负责首次取得其原生二进制。所有下载只发生在 `prepare/setup`，`check/run/build/browser` 不下载工具。已有 pnpm 通过实际版本探测后可复用（check/run 禁止 Corepack 网络下载）；不读取 Corepack 私人缓存结构，不修改用户全局 Node、pnpm 或 shell 配置。
 
-新目录缺工具时需执行 setup。工具与依赖存在时 setup 可安全重跑，pnpm 按 frozen lock 复用，不能把历史环境回执当当前成功。`--check` 的 `tools-ready` 仅证明运行时，不证明依赖、构建或浏览器已通过。安装有总超时/静默超时，日志在 `.workbench/environment/`；失败保留错误，不反复换安装方式。
+新目录缺工具时需执行 setup。工具与依赖存在时 setup 可安全重跑，pnpm 按 frozen lock 复用，不能把历史环境回执当当前成功。`--check` 的 `tools-ready` 仅证明运行时，不证明依赖、构建或浏览器已通过。工具下载有超时及字节进度；setup 应直接输出到执行工具，勿整段重定向后等待结束才读。依赖安装有总超时/静默超时，日志在 `.workbench/environment/`；失败保留错误，不反复换安装方式。
 
 ### 安装调用关系
 

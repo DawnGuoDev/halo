@@ -83,7 +83,8 @@
     "scripts/prototype/ui.sh",
     ".prototype/ui/toolchain.json",
     "scripts/prototype/runtime.py",
-    "ui/prototype/tsconfig.json"
+    "ui/prototype/tsconfig.json",
+    "scripts/prototype/safe_archive.py"
   ],
   "outputDir": ".prototype/ui/output/native",
   "entry": ".prototype/ui/output/native/prototype/preview/post-list.html",

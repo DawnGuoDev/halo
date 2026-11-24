@@ -12,7 +12,8 @@
     ".prototype/ui/toolchain.json",
     "scripts/prototype/runtime.py",
     "scripts/prototype/ui.sh",
-    "scripts/prototype/preflight.py"
+    "scripts/prototype/preflight.py",
+    "scripts/prototype/safe_archive.py"
   ],
   "probes": [
     [
