@@ -8,11 +8,19 @@ import {
   type UseOverlayScrollbarsParams,
 } from "overlayscrollbars-vue";
 import { storeToRefs } from "pinia";
-import { computed, inject, onMounted, provide, reactive } from "vue";
+import {
+  computed,
+  inject,
+  onMounted,
+  provide,
+  reactive,
+  getCurrentInstance,
+} from "vue";
 import { RouterView } from "vue-router";
 import SudoConfirmModal from "@/components/sudo/SudoConfirmModal.vue";
 import { useAppTitle } from "@/composables/use-title";
 import { i18n } from "@/locales";
+import { makePopperResizeObserverSandboxSafe } from "@/utils/popper-resize-observer";
 
 useAppTitle();
 
@@ -54,6 +62,12 @@ const formkitLocales = {
 };
 const formkitConfig = inject(Symbol.for("FormKitConfig")) as FormKitConfig;
 formkitConfig.locale = formkitLocales[i18n.global.locale.value] || "zh";
+
+// Keep floating-vue dropdowns (filters, tooltips) usable in opaque preview
+// frames where the popper resize iframe document is unavailable.
+if (getCurrentInstance()) {
+  makePopperResizeObserverSandboxSafe(getCurrentInstance()!.app);
+}
 
 // Fix 100vh issue in ios devices
 function setViewportProperty(doc: HTMLElement) {

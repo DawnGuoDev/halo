@@ -6,6 +6,7 @@ import {
   type ListedPostList,
   type Tag,
   type TagList,
+  type User,
 } from "@halo-dev/api-client";
 import type {
   AxiosAdapter,
@@ -26,6 +27,18 @@ const category: Category = {
   status: { permalink: "/categories/prototype-guides", postCount: 3 },
 };
 
+const releaseCategory: Category = {
+  apiVersion: "content.halo.run/v1alpha1",
+  kind: "Category",
+  metadata: { name: "release-notes" },
+  spec: {
+    displayName: "版本发布",
+    slug: "release-notes",
+    priority: 1,
+  },
+  status: { permalink: "/categories/release-notes", postCount: 1 },
+};
+
 const prototypeTag: Tag = {
   apiVersion: "content.halo.run/v1alpha1",
   kind: "Tag",
@@ -43,32 +56,59 @@ const frontendTag: Tag = {
 };
 
 const owner = { name: "demo-author", displayName: "演示作者" };
+const reviewer = { name: "demo-reviewer", displayName: "评审同学" };
 
-function post(
-  name: string,
-  title: string,
-  published: boolean,
-  publishTime: string | undefined,
-  tags: Tag[]
-): ListedPost {
+interface PostSeed {
+  name: string;
+  title: string;
+  published: boolean;
+  publishTime?: string;
+  creationTimestamp?: string;
+  schedulePublish?: boolean;
+  tags?: Tag[];
+  category?: Category;
+  author?: { name: string; displayName: string };
+  visible?: "PUBLIC" | "INTERNAL" | "PRIVATE";
+  labels?: Record<string, string>;
+}
+
+function post(seed: PostSeed): ListedPost {
+  const {
+    name,
+    title,
+    published,
+    publishTime,
+    creationTimestamp = "2026-11-20T08:00:00Z",
+    schedulePublish,
+    tags = [],
+    category: postCategory = category,
+    author = owner,
+    visible = "PUBLIC",
+    labels: extraLabels = {},
+  } = seed;
+  const labels: Record<string, string> = {
+    [postLabels.DELETED]: "false",
+    [postLabels.PUBLISHED]: String(published),
+  };
+  if (schedulePublish) {
+    labels[postLabels.SCHEDULING_PUBLISH] = "true";
+  }
+  Object.assign(labels, extraLabels);
   return {
     post: {
       apiVersion: "content.halo.run/v1alpha1",
       kind: "Post",
       metadata: {
         name,
-        creationTimestamp: "2026-11-20T08:00:00Z",
-        labels: {
-          [postLabels.DELETED]: "false",
-          [postLabels.PUBLISHED]: String(published),
-        },
+        creationTimestamp,
+        labels,
       },
       spec: {
         allowComment: false,
-        categories: [category.metadata.name],
+        categories: [postCategory.metadata.name],
         deleted: false,
         excerpt: { autoGenerate: false, raw: `${title}的演示摘要` },
-        owner: owner.name,
+        owner: author.name,
         pinned: false,
         priority: 0,
         publish: published,
@@ -76,40 +116,95 @@ function post(
         slug: name,
         tags: tags.map((tag) => tag.metadata.name),
         title,
-        visible: "PUBLIC",
+        visible,
       },
-      status: { permalink: `/archives/${name}`, contributors: [owner.name] },
+      status: { permalink: `/archives/${name}`, contributors: [author.name] },
     },
-    categories: [category],
-    contributors: [owner],
-    owner,
+    categories: [postCategory],
+    contributors: [author],
+    owner: author,
     stats: { approvedComment: 0, totalComment: 0, upvote: 0, visit: 12 },
     tags,
   };
 }
 
 const posts: ListedPost[] = [
-  post(
-    "prototype-bootstrap",
-    "Halo 原型初始化指南",
-    true,
-    "2026-11-22T08:00:00Z",
-    [prototypeTag]
-  ),
-  post(
-    "markdown-first-post",
-    "使用 Markdown 创建第一篇博客",
-    true,
-    "2026-11-21T08:00:00Z",
-    [frontendTag]
-  ),
-  post("frontend-checklist", "前端发布检查清单", false, undefined, [
-    frontendTag,
-  ]),
+  post({
+    name: "prototype-bootstrap",
+    title: "Halo 原型初始化指南",
+    published: true,
+    publishTime: "2026-11-22T08:00:00Z",
+    creationTimestamp: "2026-11-22T08:00:00Z",
+    tags: [prototypeTag],
+  }),
+  post({
+    name: "markdown-first-post",
+    title: "使用 Markdown 创建第一篇博客",
+    published: true,
+    publishTime: "2026-11-21T08:00:00Z",
+    creationTimestamp: "2026-11-21T08:00:00Z",
+    tags: [frontendTag],
+    author: reviewer,
+  }),
+  post({
+    name: "frontend-checklist",
+    title: "前端发布检查清单",
+    published: false,
+    creationTimestamp: "2026-11-20T08:00:00Z",
+    tags: [frontendTag],
+  }),
+  post({
+    name: "release-notes-2-28",
+    title: "Halo 2.28 版本发布说明",
+    published: true,
+    publishTime: "2026-11-19T08:00:00Z",
+    creationTimestamp: "2026-11-19T08:00:00Z",
+    tags: [prototypeTag],
+    category: releaseCategory,
+    author: reviewer,
+  }),
+  post({
+    name: "private-draft-plan",
+    title: "私有：下季度内容规划",
+    published: false,
+    creationTimestamp: "2026-11-18T08:00:00Z",
+    visible: "PRIVATE",
+    labels: { [postLabels.VISIBLE]: "PRIVATE" },
+  }),
+  post({
+    name: "scheduled-changelog",
+    title: "定时发布的更新日志",
+    published: false,
+    schedulePublish: true,
+    publishTime: "2026-12-01T08:00:00Z",
+    creationTimestamp: "2026-11-17T08:00:00Z",
+    tags: [frontendTag],
+  }),
 ];
 
-const categoryTree: CategoryTreeNode[] = [{ category, children: [] }];
+const categoryTree: CategoryTreeNode[] = [
+  { category, children: [] },
+  { category: releaseCategory, children: [] },
+];
+const categories = [category, releaseCategory];
 const tags: Tag[] = [prototypeTag, frontendTag];
+const users: User[] = [
+  {
+    apiVersion: "v1alpha1",
+    kind: "User",
+    metadata: { name: owner.name, creationTimestamp: "2026-11-01T08:00:00Z" },
+    spec: { displayName: owner.displayName, email: "demo@example.com" },
+  },
+  {
+    apiVersion: "v1alpha1",
+    kind: "User",
+    metadata: {
+      name: reviewer.name,
+      creationTimestamp: "2026-11-02T08:00:00Z",
+    },
+    spec: { displayName: reviewer.displayName, email: "reviewer@example.com" },
+  },
+];
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -142,8 +237,29 @@ function pageOf<T>(
   };
 }
 
+function readPostField(post: ListedPost, field: string): string {
+  if (field === "spec.publishTime") return post.post.spec.publishTime ?? "";
+  if (field === "metadata.creationTimestamp") {
+    return post.post.metadata.creationTimestamp ?? "";
+  }
+  return "";
+}
+
+function sorted(items: ListedPost[], sortValue: unknown): ListedPost[] {
+  const [field, direction] = String(sortValue ?? "").split(",");
+  if (!field || !["asc", "desc"].includes(direction)) {
+    return items;
+  }
+  const result = [...items].sort((a, b) =>
+    readPostField(a, field).localeCompare(readPostField(b, field))
+  );
+  return direction === "desc" ? result.reverse() : result;
+}
+
 function listPosts(params: Record<string, unknown>): ListedPostList {
-  const keyword = String(params.keyword ?? "").trim().toLocaleLowerCase();
+  const keyword = String(params.keyword ?? "")
+    .trim()
+    .toLocaleLowerCase();
   const fields = arrayParameter(params.fieldSelector);
   const labels = arrayParameter(params.labelSelector);
   const visible = fields
@@ -155,8 +271,14 @@ function listPosts(params: Record<string, unknown>): ListedPostList {
   const selectedTag = fields
     .find((field) => field.startsWith("spec.tags="))
     ?.split("=", 2)[1];
+  const selectedContributor = fields
+    .find((field) => field.startsWith("status.contributors="))
+    ?.split("=", 2)[1];
   const published = labels
     .find((label) => label.startsWith(`${postLabels.PUBLISHED}=`))
+    ?.split("=", 2)[1];
+  const scheduling = labels
+    .find((label) => label.startsWith(`${postLabels.SCHEDULING_PUBLISH}=`))
     ?.split("=", 2)[1];
 
   const filtered = posts.filter(({ post }) => {
@@ -166,14 +288,17 @@ function listPosts(params: Record<string, unknown>): ListedPostList {
     return (
       (!keyword || searchable.includes(keyword)) &&
       (!visible || post.spec.visible === visible) &&
-      (!selectedCategory ||
-        post.spec.categories?.includes(selectedCategory)) &&
+      (!selectedCategory || post.spec.categories?.includes(selectedCategory)) &&
       (!selectedTag || post.spec.tags?.includes(selectedTag)) &&
+      (!selectedContributor ||
+        post.status?.contributors?.includes(selectedContributor)) &&
       (published === undefined ||
-        post.metadata.labels?.[postLabels.PUBLISHED] === published)
+        post.metadata.labels?.[postLabels.PUBLISHED] === published) &&
+      (scheduling === undefined ||
+        post.metadata.labels?.[postLabels.SCHEDULING_PUBLISH] === scheduling)
     );
   });
-  return pageOf(filtered, params.page, params.size);
+  return pageOf(sorted(filtered, params.sort), params.page, params.size);
 }
 
 function response<T>(
@@ -213,10 +338,49 @@ export const postListPreviewAdapter: AxiosAdapter = async (config) => {
   }
   if (
     method === "GET" &&
+    url.pathname === "/apis/api.console.halo.run/v1alpha1/categories"
+  ) {
+    const page = pageOf(categories, params.page, params.size);
+    return response(config, page);
+  }
+  if (
+    method === "GET" &&
     url.pathname === "/apis/api.console.halo.run/v1alpha1/tags"
   ) {
     const page = pageOf(tags, params.page, params.size) as TagList;
     return response(config, page);
+  }
+  if (
+    method === "GET" &&
+    url.pathname === "/apis/api.console.halo.run/v1alpha1/users"
+  ) {
+    const userKeyword = String(params.keyword ?? "").trim();
+    const matched = users.filter(
+      (user) =>
+        !userKeyword ||
+        user.metadata.name.includes(userKeyword) ||
+        (user.spec.displayName ?? "").includes(userKeyword)
+    );
+    const page = pageOf(
+      matched.map((user) => ({ user })),
+      params.page,
+      params.size
+    );
+    return response(config, page);
+  }
+  const userDetail =
+    /^\/apis\/api\.console\.halo\.run\/v1alpha1\/users\/([^/]+)$/.exec(
+      url.pathname
+    );
+  if (method === "GET" && userDetail) {
+    const name = decodeURIComponent(userDetail[1]);
+    const user = users.find((item) => item.metadata.name === name);
+    if (!user) {
+      throw new Error(
+        `Prototype request is not covered: user ${name} is not in the demo data`
+      );
+    }
+    return response(config, { user, roles: [], permissions: [] });
   }
 
   throw new Error(

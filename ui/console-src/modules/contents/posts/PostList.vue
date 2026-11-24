@@ -24,15 +24,18 @@ import { useQuery } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
 import { chunk } from "es-toolkit";
 import type { Ref } from "vue";
-import { inject, provide, ref, watch } from "vue";
+import { computed, inject, provide, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import { useRoute } from "vue-router";
 import CategoryFilterDropdown from "@/components/filter/CategoryFilterDropdown.vue";
 import TagFilterDropdown from "@/components/filter/TagFilterDropdown.vue";
 import UserFilterDropdown from "@/components/filter/UserFilterDropdown.vue";
 import { postLabels } from "@/constants/labels";
 import PostBatchSettingModal from "./components/PostBatchSettingModal.vue";
+import PostFilterChips from "./components/PostFilterChips.vue";
 import PostListItem from "./components/PostListItem.vue";
 import PostSettingModal from "./components/PostSettingModal.vue";
+import type { PostFilterChipKey } from "./utils/post-filter-chips";
 
 const { t } = useI18n();
 const prototypePreview = inject("haloPrototypePreview", false);
@@ -78,6 +81,59 @@ watch(
     page.value = 1;
   }
 );
+
+// Filters shown as removable chips below the filter dropdowns.
+const route = useRoute();
+
+const filterState = computed(() => ({
+  keyword: appliedKeyword.value,
+  status: selectedPublishStatus.value,
+  visible: selectedVisible.value,
+  category: selectedCategory.value,
+  tag: selectedTag.value,
+  contributor: selectedContributor.value,
+}));
+
+const hasFilters = computed(() =>
+  Object.values(filterState.value).some(
+    (value) =>
+      value !== undefined && value !== null && String(value).trim() !== ""
+  )
+);
+
+function clearFilter(key: PostFilterChipKey) {
+  switch (key) {
+    case "keyword":
+      keyword.value = "";
+      break;
+    case "status":
+      selectedPublishStatus.value = undefined;
+      break;
+    case "visible":
+      selectedVisible.value = undefined;
+      break;
+    case "category":
+      selectedCategory.value = undefined;
+      break;
+    case "tag":
+      selectedTag.value = undefined;
+      break;
+    case "contributor":
+      selectedContributor.value = undefined;
+      break;
+  }
+}
+
+function clearAllFilters() {
+  clearFilter("keyword");
+  clearFilter("status");
+  clearFilter("visible");
+  clearFilter("category");
+  clearFilter("tag");
+  clearFilter("contributor");
+  selectedSort.value = undefined;
+  page.value = 1;
+}
 
 const {
   data: posts,
@@ -166,6 +222,20 @@ const {
 
     return hasCancelingPublishPost ? 1000 : false;
   },
+});
+
+// The search box commits its keyword when submitted (Enter / clear), while the
+// query key updates on every keystroke. The chips row follows the committed
+// value so a typed but unsent keyword is not shown as an active filter.
+const committedKeyword = computed(() => String(route.query.keyword ?? ""));
+const appliedKeyword = ref(committedKeyword.value);
+
+watch([keyword, () => posts.value, total], () => {
+  appliedKeyword.value = keyword.value;
+});
+
+watch(committedKeyword, (value) => {
+  appliedKeyword.value = value;
 });
 
 const handleOpenSettingModal = async (post: Post) => {
@@ -547,7 +617,39 @@ watch(
           </div>
         </div>
       </template>
+      <div
+        v-if="!selectedPostNames.length && hasFilters"
+        class="border-b border-gray-100 bg-gray-50 px-4 pb-3"
+      >
+        <PostFilterChips
+          :keyword="appliedKeyword"
+          :status="selectedPublishStatus"
+          :visible="selectedVisible"
+          :category="selectedCategory"
+          :tag="selectedTag"
+          :contributor="selectedContributor"
+          @remove="clearFilter"
+          @clear="clearAllFilters"
+        />
+      </div>
       <VLoading v-if="isLoading" />
+      <Transition v-else-if="!posts?.length && hasFilters" appear name="fade">
+        <VEmpty
+          :message="$t('core.post.filters.empty.message')"
+          :title="$t('core.post.filters.empty.title')"
+        >
+          <template #actions>
+            <VSpace>
+              <VButton @click="clearAllFilters">
+                {{ $t("core.post.filters.empty.clear") }}
+              </VButton>
+              <VButton @click="refetch">
+                {{ $t("core.common.buttons.refresh") }}
+              </VButton>
+            </VSpace>
+          </template>
+        </VEmpty>
+      </Transition>
       <Transition v-else-if="!posts?.length" appear name="fade">
         <VEmpty
           :message="$t('core.post.empty.message')"

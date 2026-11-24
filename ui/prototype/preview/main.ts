@@ -1,15 +1,12 @@
+import PostList from "@console/modules/contents/posts/PostList.vue";
 import { utils } from "@halo-dev/ui-shared";
 import { createPinia } from "pinia";
 import { createApp, type DirectiveBinding } from "vue";
-import {
-  createMemoryHistory,
-  createRouter,
-  RouterView,
-} from "vue-router";
-import PostList from "@console/modules/contents/posts/PostList.vue";
+import { createMemoryHistory, createRouter, RouterView } from "vue-router";
 import { setLanguage, setupI18n } from "@/locales";
 import { setupComponents } from "@/setup/setupComponents";
 import { setupVueQuery } from "@/setup/setupVueQuery";
+import { makePopperResizeObserverSandboxSafe } from "@/utils/popper-resize-observer";
 import { installPostListPreview } from "../mock/post-list";
 import PreviewApp from "./PreviewApp.vue";
 import "@halo-dev/components/dist/style.css";
@@ -24,6 +21,10 @@ app.use(createPinia());
 setupI18n(app);
 setupVueQuery(app);
 setupComponents(app);
+// The preview is also delivered as a self-contained HTML file rendered in an
+// opaque `sandbox="allow-scripts"` iframe where floating-vue's popper resize
+// observer cannot read its iframe document.
+makePopperResizeObserverSandboxSafe(app);
 
 // Preview identity grants read-only post access and never enters production stores.
 utils.permission.setUserPermissions(["system:posts:view"]);
