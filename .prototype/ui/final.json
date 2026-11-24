@@ -110,7 +110,7 @@
           {
             "action": "count",
             "selector": "tr.entity-wrapper",
-            "value": 3
+            "value": 6
           },
           {
             "action": "fill",
@@ -133,7 +133,181 @@
             "value": "Halo 原型初始化指南"
           }
         ]
+      },
+      {
+        "id": "keyword-chip",
+        "steps": [
+          {
+            "action": "hidden",
+            "selector": ".post-filter-chips"
+          },
+          {
+            "action": "fill",
+            "selector": "input[name=keyword]",
+            "value": "原型"
+          },
+          {
+            "action": "press",
+            "selector": "input[name=keyword]",
+            "key": "Enter"
+          },
+          {
+            "action": "count",
+            "selector": "[data-filter-chip]",
+            "value": 1
+          },
+          {
+            "action": "text",
+            "selector": "[data-filter-chip=keyword]",
+            "value": "关键词：原型"
+          },
+          {
+            "action": "click",
+            "selector": "[data-filter-chip=keyword] button"
+          },
+          {
+            "action": "hidden",
+            "selector": ".post-filter-chips"
+          },
+          {
+            "action": "count",
+            "selector": "tr.entity-wrapper",
+            "value": 6
+          }
+        ]
+      },
+      {
+        "id": "close-single-chip",
+        "steps": [
+          {
+            "action": "fill",
+            "selector": "input[name=keyword]",
+            "value": "发布"
+          },
+          {
+            "action": "press",
+            "selector": "input[name=keyword]",
+            "key": "Enter"
+          },
+          {
+            "action": "click",
+            "selector": "[data-filter-chip=keyword] button"
+          },
+          {
+            "action": "hidden",
+            "selector": ".post-filter-chips"
+          },
+          {
+            "action": "click",
+            "selector": "button",
+            "matchText": "状态：全部"
+          },
+          {
+            "action": "click",
+            "selector": "[role=option]",
+            "matchText": "已发布"
+          },
+          {
+            "action": "click",
+            "selector": "[data-filter-chip=status] button"
+          },
+          {
+            "action": "hidden",
+            "selector": ".post-filter-chips"
+          },
+          {
+            "action": "count",
+            "selector": "tr.entity-wrapper",
+            "value": 6
+          }
+        ]
+      },
+      {
+        "id": "clear-all-back-to-first-page",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "button",
+            "matchText": "见性"
+          },
+          {
+            "action": "click",
+            "selector": "[role=option]",
+            "matchText": "公开"
+          },
+          {
+            "action": "fill",
+            "selector": "input[name=keyword]",
+            "value": "发布"
+          },
+          {
+            "action": "press",
+            "selector": "input[name=keyword]",
+            "key": "Enter"
+          },
+          {
+            "action": "count",
+            "selector": "[data-filter-chip]",
+            "value": 2
+          },
+          {
+            "action": "click",
+            "selector": ".post-filter-chips__clear"
+          },
+          {
+            "action": "hidden",
+            "selector": ".post-filter-chips"
+          },
+          {
+            "action": "count",
+            "selector": "tr.entity-wrapper",
+            "value": 6
+          },
+          {
+            "action": "text",
+            "selector": "button",
+            "matchText": "见性",
+            "value": "可见性"
+          }
+        ]
+      },
+      {
+        "id": "chips-overview",
+        "steps": [
+          {
+            "action": "fill",
+            "selector": "input[name=keyword]",
+            "value": "发布"
+          },
+          {
+            "action": "press",
+            "selector": "input[name=keyword]",
+            "key": "Enter"
+          },
+          {
+            "action": "click",
+            "selector": "button",
+            "matchText": "状态：全部"
+          },
+          {
+            "action": "click",
+            "selector": "[role=option]",
+            "matchText": "已发布"
+          },
+          {
+            "action": "count",
+            "selector": "[data-filter-chip]",
+            "value": 2
+          },
+          {
+            "action": "text",
+            "selector": ".post-filter-chips",
+            "value": "关键词：发布",
+            "screenshot": true
+          }
+        ]
       }
-    ]
+    ],
+    "settleMs": 600
   }
 }
