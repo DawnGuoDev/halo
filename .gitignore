@@ -107,3 +107,6 @@ e2e/build/
 e2e/allure-results/
 e2e/allure-report/
 application/build/e2e-runtime-classpath.txt
+
+/.workbench/
+/.prototype/ui/output/

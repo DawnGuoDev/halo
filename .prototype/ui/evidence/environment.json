@@ -1,0 +1,37 @@
+{
+  "status": "passed",
+  "recipeHash": "2c975ee21544fc13402ca5421a5e9af7a0666b1fb199930a9cb735b3ab347542",
+  "inputs": {
+    "ui/package.json": "c67a03130615abc381fb72941eb64c02f9b5dcb6116e5c2695cec819459b8e1a",
+    "ui/pnpm-lock.yaml": "45c1ba31344fd9dcef27b7888bd6296f09fd0b8d507c3dc414eaa18a2cc074ad",
+    "ui/pnpm-workspace.yaml": "188b7eec3546a999d14484ec34cedf1420f597386c1fc82a08dfb2c59dafe1e1",
+    "scripts/prototype/environment.py": "e09288169ef4fdfa317eb447307e71b339171395f261598e78516ce0e83220f2",
+    "scripts/prototype/probe-node.mjs": "292634f797cb3269c7ac4b9d85473b960aed5c49bdfd4a1db147aacc5227fbeb",
+    "scripts/prototype/setup.sh": "62783a71654691b4b6b8d2208d36387fb97fe7f5388c8923217e194f7791c564"
+  },
+  "probes": [
+    {
+      "argv": [
+        "node",
+        "../scripts/prototype/probe-node.mjs"
+      ],
+      "output": "v24.22.3"
+    },
+    {
+      "argv": [
+        "corepack",
+        "pnpm",
+        "--version"
+      ],
+      "output": "12.4.2"
+    }
+  ],
+  "platform": {
+    "system": "Linux",
+    "machine": "x86_64"
+  },
+  "exitCode": 0,
+  "seconds": 33.038,
+  "scope": "install-and-version-probes-only",
+  "note": "New sandbox must rerun recipe; this is historical evidence, not current readiness."
+}

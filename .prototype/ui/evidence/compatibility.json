@@ -1,0 +1,22 @@
+{
+  "status": "native-compatible-not-page-verified",
+  "format": "es",
+  "bundler": "rolldown",
+  "node": "v24.22.3",
+  "builder": "8.3.7",
+  "adapterHash": "add9533c0efb8d63842b3fc69a6504e4d2ea9385f8d4713cd0f1a77d27cf0972",
+  "checked": [
+    "single HTML",
+    "closed lazy import",
+    "SVG",
+    "CSS",
+    "top-level await"
+  ],
+  "notChecked": [
+    "business plugins/aliases",
+    "workspace exports",
+    "real page",
+    "browser/sandbox"
+  ],
+  "platform": "linux-x64"
+}

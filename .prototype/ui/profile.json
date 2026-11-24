@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "app": "ui",
+  "branch": {
+    "remote": "origin",
+    "baseBranch": "main",
+    "baseRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+    "previewBranch": "improvement/prototype-preview"
+  },
+  "representativePage": "console-src/modules/contents/posts/PostList.vue",
+  "commands": {
+    "install": [
+      "corepack",
+      "pnpm",
+      "install",
+      "--frozen-lockfile"
+    ],
+    "build": [
+      "bash",
+      "scripts/prototype/ui.sh",
+      "exec",
+      "vp",
+      "build",
+      ".",
+      "--config",
+      "prototype/preview/vite.config.ts",
+      "--mode",
+      "prototype"
+    ],
+    "export": [
+      "bash",
+      "scripts/prototype/export.sh"
+    ]
+  },
+  "workbenchConfig": ".prototype/ui/final.json",
+  "environmentRecipe": ".prototype/ui/environment.json",
+  "environmentEvidence": ".prototype/ui/evidence/environment.json",
+  "compatibilityEvidence": ".prototype/ui/evidence/compatibility.json",
+  "guide": "docs/prototype-preview.md",
+  "guideEntry": "README.md",
+  "productionIsolationEvidence": ".prototype/ui/evidence/production-isolation.md"
+}

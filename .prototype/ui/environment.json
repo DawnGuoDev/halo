@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "root": "../..",
+  "app": "ui",
+  "inputs": [
+    "ui/package.json",
+    "ui/pnpm-lock.yaml",
+    "ui/pnpm-workspace.yaml",
+    "scripts/prototype/environment.py",
+    "scripts/prototype/probe-node.mjs",
+    "scripts/prototype/setup.sh"
+  ],
+  "probes": [
+    ["node", "../scripts/prototype/probe-node.mjs"],
+    ["corepack", "pnpm", "--version"]
+  ],
+  "install": ["corepack", "pnpm", "install", "--frozen-lockfile"],
+  "env": {
+    "CI": "true",
+    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
+  },
+  "note": "Run from a POSIX shell with Python 3, Corepack and a Node.js version satisfying ui/package.json on PATH. The probe reads the minimum from ui/package.json; Corepack selects the packageManager declared there. No registry override or dependency version change is used."
+}

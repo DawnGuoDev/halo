@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.app.json",
+  "include": [
+    "../env.d.ts",
+    "preview/main.ts",
+    "preview/PreviewApp.vue",
+    "mock/**/*.ts"
+  ],
+  "exclude": ["mock/**/*.spec.ts"],
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.prototype.tsbuildinfo"
+  }
+}

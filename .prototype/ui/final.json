@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "root": "../..",
+  "phase": "final",
+  "checks": [
+    [
+      "bash",
+      "scripts/prototype/ui.sh",
+      "exec",
+      "vp",
+      "run",
+      "--cache",
+      "--filter",
+      "@halo-dev/api-client",
+      "--filter",
+      "@halo-dev/components",
+      "--filter",
+      "@halo-dev/ui-shared",
+      "build"
+    ],
+    [
+      "bash",
+      "scripts/prototype/ui.sh",
+      "exec",
+      "vp",
+      "build",
+      ".",
+      "--config",
+      "prototype/preview/vite.config.ts",
+      "--mode",
+      "prototype"
+    ]
+  ],
+  "build": [
+    "bash",
+    "scripts/prototype/export.sh"
+  ],
+  "timeoutSeconds": 900,
+  "inputs": [
+    "ui/package.json",
+    "ui/pnpm-lock.yaml",
+    "ui/pnpm-workspace.yaml",
+    "ui/postcss.config.cjs",
+    "ui/tailwind.config.ts",
+    "ui/tsconfig.json",
+    "ui/tsconfig.app.json",
+    "ui/console-src/modules/contents/posts",
+    "ui/console-src/composables/use-entity-extension-points.ts",
+    "ui/console-src/composables/use-operation-extension-points.ts",
+    "ui/src",
+    "ui/packages/api-client/entry",
+    "ui/packages/api-client/src",
+    "ui/packages/api-client/package.json",
+    "ui/packages/api-client/vite.config.ts",
+    "ui/packages/api-client/tsconfig.json",
+    "ui/packages/components/src",
+    "ui/packages/components/package.json",
+    "ui/packages/components/vite.config.ts",
+    "ui/packages/components/tsconfig.json",
+    "ui/packages/components/tsconfig.app.json",
+    "ui/packages/components/postcss.config.cjs",
+    "ui/packages/components/tailwind.config.ts",
+    "ui/packages/shared/src",
+    "ui/packages/shared/package.json",
+    "ui/packages/shared/vite.config.ts",
+    "ui/packages/shared/tsconfig.json",
+    "ui/packages/shared/tsconfig.app.json",
+    "ui/prototype/preview",
+    "ui/prototype/mock",
+    "scripts/prototype/ui.sh",
+    "scripts/prototype/export.sh"
+  ],
+  "outputDir": ".prototype/ui/output/final",
+  "entry": ".prototype/ui/output/final/index.html",
+  "selfContained": true,
+  "browser": {
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "ready": ".page-header__title-text",
+    "sandbox": "allow-scripts",
+    "csp": null,
+    "timeoutMs": 15000,
+    "scenarios": [
+      {
+        "id": "post-search",
+        "steps": [
+          {
+            "action": "count",
+            "selector": "tr.entity-wrapper",
+            "value": 3
+          },
+          {
+            "action": "fill",
+            "selector": "input[name=keyword]",
+            "value": "原型"
+          },
+          {
+            "action": "press",
+            "selector": "input[name=keyword]",
+            "key": "Enter"
+          },
+          {
+            "action": "count",
+            "selector": "tr.entity-wrapper",
+            "value": 1
+          },
+          {
+            "action": "text",
+            "selector": "tr.entity-wrapper",
+            "value": "Halo 原型初始化指南"
+          }
+        ]
+      }
+    ]
+  }
+}

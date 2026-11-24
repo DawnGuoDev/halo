@@ -24,7 +24,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { useRouteQuery } from "@vueuse/router";
 import { chunk } from "es-toolkit";
 import type { Ref } from "vue";
-import { provide, ref, watch } from "vue";
+import { inject, provide, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import CategoryFilterDropdown from "@/components/filter/CategoryFilterDropdown.vue";
 import TagFilterDropdown from "@/components/filter/TagFilterDropdown.vue";
@@ -35,6 +35,7 @@ import PostListItem from "./components/PostListItem.vue";
 import PostSettingModal from "./components/PostSettingModal.vue";
 
 const { t } = useI18n();
+const prototypePreview = inject("haloPrototypePreview", false);
 
 const settingModal = ref(false);
 const selectedPost = ref<Post>();
@@ -350,7 +351,7 @@ watch(
     :post="selectedPost"
     @close="onSettingModalClose"
   >
-    <template #actions>
+    <template v-if="!prototypePreview" #actions>
       <span @click="handleSelectPrevious">
         <IconArrowLeft v-tooltip="$t('core.common.buttons.previous')" />
       </span>

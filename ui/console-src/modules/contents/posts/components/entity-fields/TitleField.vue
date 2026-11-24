@@ -6,7 +6,7 @@ import {
   VSpace,
   VStatusDot,
 } from "@halo-dev/components";
-import { computed, ref } from "vue";
+import { computed, inject, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { postLabels } from "@/constants/labels";
 import PostTag from "../../tags/components/PostTag.vue";
@@ -19,6 +19,7 @@ const props = withDefaults(
 );
 
 const { t } = useI18n();
+const prototypePreview = inject("haloPrototypePreview", false);
 
 const externalUrl = computed(() => {
   const { status, metadata } = props.post.post;
@@ -52,13 +53,17 @@ const commentText = computed(() => {
 <template>
   <VEntityField
     :title="post.post.spec.title"
-    :route="{
-      name: 'PostEditor',
-      query: { name: post.post.metadata.name },
-    }"
+    :route="
+      prototypePreview
+        ? undefined
+        : {
+            name: 'PostEditor',
+            query: { name: post.post.metadata.name },
+          }
+    "
     max-width="30rem"
   >
-    <template #extra>
+    <template v-if="!prototypePreview" #extra>
       <VSpace>
         <RouterLink
           v-if="post.post.status?.inProgress"
@@ -80,7 +85,7 @@ const commentText = computed(() => {
         </a>
       </VSpace>
     </template>
-    <template #description>
+    <template v-if="!prototypePreview" #description>
       <div class="flex flex-col gap-1.5">
         <VSpace class="flex-wrap !gap-y-1">
           <p
