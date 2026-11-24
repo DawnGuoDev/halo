@@ -9,27 +9,38 @@
   },
   "representativePage": "console-src/modules/contents/posts/PostList.vue",
   "commands": {
-    "install": [
-      "corepack",
-      "pnpm",
-      "install",
-      "--frozen-lockfile"
+    "prepare": [
+      "bash",
+      "scripts/prototype/setup.sh"
+    ],
+    "preflight": [
+      "bash",
+      "scripts/prototype/setup.sh",
+      "--check"
+    ],
+    "check": [
+      "python3",
+      "scripts/prototype/preview.py",
+      "check"
     ],
     "build": [
+      "python3",
+      "scripts/prototype/preview.py",
+      "build"
+    ],
+    "browser": [
+      "python3",
+      "scripts/prototype/preview.py",
+      "browser"
+    ],
+    "install": [
       "bash",
-      "scripts/prototype/ui.sh",
-      "exec",
-      "vp",
-      "build",
-      ".",
-      "--config",
-      "prototype/preview/vite.config.ts",
-      "--mode",
-      "prototype"
+      "scripts/prototype/setup.sh"
     ],
     "export": [
-      "bash",
-      "scripts/prototype/export.sh"
+      "python3",
+      "scripts/prototype/preview.py",
+      "build"
     ]
   },
   "workbenchConfig": ".prototype/ui/final.json",
@@ -38,5 +49,7 @@
   "compatibilityEvidence": ".prototype/ui/evidence/compatibility.json",
   "guide": "docs/prototype-preview.md",
   "guideEntry": "README.md",
-  "productionIsolationEvidence": ".prototype/ui/evidence/production-isolation.md"
+  "productionIsolationEvidence": ".prototype/ui/evidence/production-isolation.md",
+  "commandCwd": "repository-root",
+  "runtimeConfig": ".prototype/ui/toolchain.json"
 }

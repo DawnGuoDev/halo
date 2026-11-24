@@ -8,16 +8,28 @@
     "ui/pnpm-workspace.yaml",
     "scripts/prototype/environment.py",
     "scripts/prototype/probe-node.mjs",
-    "scripts/prototype/setup.sh"
+    "scripts/prototype/setup.sh",
+    ".prototype/ui/toolchain.json",
+    "scripts/prototype/runtime.py",
+    "scripts/prototype/ui.sh",
+    "scripts/prototype/preflight.py"
   ],
   "probes": [
-    ["node", "../scripts/prototype/probe-node.mjs"],
-    ["corepack", "pnpm", "--version"]
+    [
+      "python3",
+      "../scripts/prototype/runtime.py",
+      "versions"
+    ]
   ],
-  "install": ["corepack", "pnpm", "install", "--frozen-lockfile"],
+  "install": [
+    "bash",
+    "../scripts/prototype/ui.sh",
+    "install",
+    "--frozen-lockfile"
+  ],
   "env": {
     "CI": "true",
     "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
   },
-  "note": "Run from a POSIX shell with Python 3, Corepack and a Node.js version satisfying ui/package.json on PATH. The probe reads the minimum from ui/package.json; Corepack selects the packageManager declared there. No registry override or dependency version change is used."
+  "note": "Run setup.sh from any cwd to prepare verified tools first. Runner commands execute in ui/. Install calls only the pnpm leaf driver, never setup.sh. --check is read-only and does not install dependencies."
 }

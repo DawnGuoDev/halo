@@ -110,3 +110,7 @@ application/build/e2e-runtime-classpath.txt
 
 /.workbench/
 /.prototype/ui/output/
+
+/.prototype/tools/
+
+/scripts/prototype/__pycache__/

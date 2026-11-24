@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/DawnGuoDev/halo.git",
+  "applications": [{
+    "app": "ui",
+    "previewBranch": "improvement/prototype-preview",
+    "profile": ".prototype/ui/profile.json",
+    "guide": "docs/prototype-preview.md"
+  }],
+  "discovery": "Sync this binding into platform repository context. This file exists on the preview branch and is not discoverable from main without a binding."
+}

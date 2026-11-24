@@ -1,208 +1,98 @@
 # Halo 原型开发与预览指南
 
-## 概述
+## 基座身份与范围
 
-本指南描述如何在 Halo 仓库 `ui` 前端工程中使用已初始化的原型预览基座。新沙箱无需旧 Session 文件即可照此操作。
+- 仓库：`DawnGuoDev/halo`；长期分支：`improvement/prototype-preview`。
+- 应用：`ui`；机器配置：`.prototype/ui/profile.json`；可同步的定位记录：`.prototype/registry.json`。
+- 基线主干：`main@f6c046cc27e2b5d61367b85792b6cd51bd9101f1`。
+- 限定页面：真实 `ui/console-src/modules/contents/posts/PostList.vue`，内存路由 `/posts`。
+- 演示：3 篇文章，关键词“原型”+ Enter 后显示 1 篇。其他页面、写入及全站接口未覆盖。
+- 后续需求从这个分支的已验证提交派生，不直接堆到长期基座；不新增替代文章列表。
 
-- **仓库**：`DawnGuoDev/halo`
-- **长期预览分支**：`improvement/prototype-preview`
-- **基线主干**：`main` @ `f6c046cc`
-- **限定页面**：`ui/console-src/modules/contents/posts/PostList.vue`（路由 `/posts`）
-- **关键操作**：输入关键词"原型"并按 Enter，文章列表从 3 条过滤为 1 条（"Halo 原型初始化指南"）
-- **不覆盖**：文章编辑、设置、批量操作、分类/标签管理及其他页面
+以下命令均从仓库根目录执行，不需要后端、数据库、JDK 或全栈启动。
 
-## 配套 Skill
+## 新沙箱准备
 
-| Skill | 版本 | 用途 |
-|---|---|---|
-| prototype-repo-bootstrap | 0.9.0 | 仓库原型初始化、自检和交付 |
-| prototype-workbench | 5.8.1 | 构建配置、浏览器验收和导出 |
-
-两个 Skill 分别打包，由平台注入运行时工作区。执行时通过环境变量传递实际路径：
+前置：Python **3.12+**（使用 tarfile 的安全 data filter）、POSIX shell、Git、访问 Node 官方及 npm 官方源的 HTTPS 网络。支持的工具下载目标为 macOS/Linux 的 arm64/x64；本轮实测为 macOS arm64。Linux 沙箱恢复须在平台实际验证，不能把本地结果当 Linux 已通过。
 
 ```bash
-export BOOTSTRAP=<prototype-repo-bootstrap skill 根路径>
-export WORKBENCH=<prototype-workbench skill 根路径>
+# 先静态检查配方/cwd/安装叶子；不安装、不改 PATH
+python3 scripts/prototype/preflight.py
+
+# 准备工具并按冻结锁安装；成功返回 0
+bash scripts/prototype/setup.sh
+
+# 只检查工具实际版本及配方，不安装依赖
+bash scripts/prototype/setup.sh --check
 ```
 
-## 环境准备
+Node 固定为 `.prototype/ui/toolchain.json` 的已验证版本（当前 24.22.3），仍需满足 `ui/package.json` engines；pnpm 精确版本只读取 `ui/package.json` 的 `packageManager`（当前 12.4.2）。更新约束时作为基座维护验证，不修改锁或 engine 来迁就环境。
 
-**前置条件**：POSIX shell、Python 3、Git、Corepack 兼容的 Node.js。
+工具保存在忽略的 `.prototype/tools/`，Node/pnpm 缓存按版本、OS、架构隔离。可通过 `PROTOTYPE_TOOLS_DIR` 指定独立缓存。Node 压缩包使用官方 SHA256 校验；pnpm npm 包使用官方元数据 SHA512，官方 pnpm JS 引导器负责首次取得其原生二进制。所有下载只发生在 `prepare/setup`，`check/run/build/browser` 不下载工具。不依赖 Corepack shim，也不读取其私人缓存结构，不修改用户全局 Node、pnpm 或 shell 配置。
+
+新目录缺工具时需执行 setup。工具与依赖存在时 setup 可安全重跑，pnpm 按 frozen lock 复用，不能把历史环境回执当当前成功。`--check` 的 `tools-ready` 仅证明运行时，不证明依赖、构建或浏览器已通过。安装有总超时/静默超时，日志在 `.workbench/environment/`；失败保留错误，不反复换安装方式。
+
+### 安装调用关系
+
+`setup.sh → runtime.py prepare → environment.py run → ui.sh install --frozen-lockfile`。
+
+配方 root 相对配方文件，app 相对仓库根；runner 的 probes/install cwd 是 `ui/`。install 仅调用 `../scripts/prototype/ui.sh` 这一安装叶子，不得回调 setup 或 runner。`preflight.py` 验证本仓库固定调用契约和 probe 文件路径，不声称能分析任意 shell 脚本调用环。
+
+## 固定检查、构建和浏览器命令
+
+平台须分别提供 `prototype-workbench` Skill；当前配置实测版本为 **5.9.0**。填写实际安装根目录，不能猜旧 Session 路径：
 
 ```bash
-# 从仓库根目录执行
-# 1. 确认 Node.js 版本满足 ui/package.json engines 要求
-node --version   # 实测 v24.22.3
+export PROTOTYPE_WORKBENCH=/实际路径/prototype-workbench
 
-# 2. 确认 pnpm 版本
-corepack pnpm --version  # 实测 12.4.2
+# 预览相关类型、ESLint、Mock 单元测试；不编译业务包
+# 首次运行须先 build，让必要 workspace 声明文件存在
+python3 scripts/prototype/preview.py check
 
-# 3. 冻结锁安装（在 ui/ 目录）
-cd ui/
-corepack pnpm install --frozen-lockfile
-cd ..
+# 配置预检 → 必要 workspace → 预览类型/ESLint → 原生编译 → 自包含导出
+python3 scripts/prototype/preview.py build
+
+# 必须已有当前有效构建；不会自动重建或下载浏览器
+python3 scripts/prototype/preview.py browser
 ```
 
-环境配方见 `.prototype/ui/environment.json`，安装回执见 `.prototype/ui/evidence/environment.json`。
-新沙箱须重新执行同一配方，不可直接沿用旧 `node_modules`。
+首次请先执行 `build` 再执行独立 `check`。build 已将预览类型和 ESLint 放在入口编译前，`check` 额外执行 Mock 单测。它们是限定原型验证，不能替代需求代码所触发的仓库全量 typecheck/lint/test 规则。
 
-也可使用自动化脚本：`scripts/prototype/setup.sh`。
+输出为 `.prototype/ui/output/final/index.html`，默认自包含；原生入口为 `.prototype/ui/output/native/prototype/preview/post-list.html`。不得更名入口后靠临时环境变量碰运气。原生/最终配置分别为 `native.json`/`final.json`。业务、Mock 尚未分层，源码变化要重建；`--ensure` 只复用输入与输出指纹匹配的构建。
 
-## 构建预览包
-
-所有命令从**仓库根目录**执行。
-
-### A 阶段：原生构建
+浏览器优先使用已安装 Playwright；否则使用共享 CDP 适配器，二者都不是重新研发的对象。显式选择示例：
 
 ```bash
-export PATH="<node bin>:$PATH"
-
-# 校验配置（不编译）
-python3 "$WORKBENCH/scripts/build.py" .prototype/ui/native.json --validate
-
-# 执行构建
-python3 "$WORKBENCH/scripts/build.py" .prototype/ui/native.json
+python3 scripts/prototype/preview.py browser --adapter playwright \
+  --playwright-module /已安装/playwright/index.mjs --executable /实际路径/chrome
+python3 scripts/prototype/preview.py browser --adapter cdp --executable /实际路径/chromium
 ```
 
-产物位于 `.prototype/ui/output/native/prototype/preview/post-list.html`。
+也可设置 `PROTOTYPE_BROWSER`、`PROTOTYPE_PLAYWRIGHT_MODULE`。未传可执行文件时仅探测现有 Chrome/Chromium（包括 macOS Chrome），不下载。适配器生成并核对真实网页及 `srcdoc + sandbox=allow-scripts`、`origin=null` 的业务步骤报告；报告在 `.workbench/browser/` 或 `.workbench/browser-cdp/`。本地等价 iframe 不是平台实际验收。
 
-### B 阶段：自包含导出
+## 实现与交接
 
-```bash
-# 校验配置
-python3 "$WORKBENCH/scripts/build.py" .prototype/ui/final.json --validate
+1. 核对干净工作区和远端基座；已有未提交改动不要直接切换或覆盖。
+2. 从确认的基座提交创建符合仓库规则的 `feat/<需求>` 分支。
+3. 修改真实页面/引用模块，复用主题和组件；在 `ui/prototype/mock/post-list.ts` 按调用链补最小数据。普通模式不加载 Mock，未覆盖请求显式失败。
+4. 修改后使用固定 build/check/browser 入口。保留构建输入和输出证据，源变则重建，selector/文档变化不重复业务编译。
+5. 按平台协议只发布已验收入口原字节及可编辑源码材料，回读核对。每用途保持一个最新有效记录，不因同名而假定更新了旧 ID。
+6. 业务代码和预览适配分开审查，Mock、演示身份和宿主不得直接合入生产主干。基座修复另行验证回合长期分支。
 
-# 执行构建（含 checks 编译 + build 装配）
-python3 "$WORKBENCH/scripts/build.py" .prototype/ui/final.json
-```
+工具、包管理器或导出器失效时，保存版本、命令、退出码、原始错误和最后有效结果，转基座维护；不要研究 Corepack 内部实现、复制修改 CDP 客户端或在产品设计节点造新打包器。
 
-产物位于 `.prototype/ui/output/final/index.html`（自包含 HTML）。
+## 初始化专用自检
 
-**构建说明**：当前配置中 `final.json` 的 `checks` 会编译共享包（api-client/components/ui-shared）和预览入口，`build` 调用 `scripts/prototype/export.sh` 装配自包含 HTML。仅改 Mock 数据也需要完整重建，因为 Mock 代码在预览入口编译中被打包；不存在分层缓存跳过业务编译的机制。
+仅初始化/基座维护时使用 `prototype-repo-bootstrap@0.9.0` 的完整改码重建自检；普通需求不要每次重做。
 
-## 浏览器验收
+入库计划 `.prototype/ui/selfcheck-plan.json` 记录初始化历史基线与 Linux 浏览器路径。执行者须先生成忽略目录中的本轮计划，填实际仓库、当前 HEAD、浏览器可执行文件；保持原始计划及来源，不直接把旧 revision 当当前。`node` 必须使用托管工具的 PATH。先按脚本 `--help` 和 schema 预检，再执行一次完整自检；不要仅为修改文档重跑此矩阵。
 
-```bash
-# standalone + iframe-srcdoc（origin=null, sandbox=allow-scripts）
-node "$WORKBENCH/scripts/browser-cdp.mjs" .prototype/ui/final.json \
-  --executable /usr/bin/chromium-browser
-```
+业务改码标记来自真实语言依赖中的分页文案，不是宿主横幅；恢复后重新构建。执行范围、源码哈希、原始报告与截图应以可获取证据交付，最终 HEAD/发布回执留包外。
 
-验收场景（定义在 `final.json` 的 `browser.scenarios`）：
-1. 页面加载后 `tr.entity-wrapper` 行数为 3
-2. 在 `input[name=keyword]` 输入"原型"并按 Enter
-3. 行数变为 1，文本包含"Halo 原型初始化指南"
+## 定位与维护
 
-## 内置自检
+`.prototype/registry.json` 和本指南位于预览分支，主干未增加定位入口。平台须把该登记同步为空间仓库上下文或保存预览分支关联；仅在预览分支放文件不能保证从主干自动发现。找不到已知基座时应询问，不能直接重新初始化。
 
-自检计划已入库：`.prototype/ui/selfcheck-plan.json`。
+排障见 [prototype-troubleshooting.md](prototype-troubleshooting.md)。未改生产启动入口、构建配置、鉴权或后端契约。
 
-```bash
-# 预检（不构建、不启动浏览器、不改源码）
-python3 "$BOOTSTRAP/scripts/selfcheck.py" --validate-only \
-  --plan .prototype/ui/selfcheck-plan.json \
-  --workbench "$WORKBENCH" \
-  --out <仓库外输出目录>
-
-# 正式运行（构建+浏览器+改码重建+恢复复验）
-python3 "$BOOTSTRAP/scripts/selfcheck.py" \
-  --plan .prototype/ui/selfcheck-plan.json \
-  --workbench "$WORKBENCH" \
-  --out <仓库外输出目录>
-```
-
-**注意**：`--out` 必须指向仓库外或 `.gitignore` 忽略的目录（如 `.workbench/`），不可在 Git 跟踪目录内。
-
-改码标记说明：rebuild 标记来自真实业务依赖 `ui/src/locales/zh-CN.json` 的分页总文案"共 {total} 项数据"→"Halo 文章（重建验证）"，selector `.pagination__total`。自检完成后源码自动恢复。
-
-## 预览架构
-
-```
-ui/prototype/
-├── preview/
-│   ├── main.ts          # 薄宿主入口：createApp + memoryRouter + PostList
-│   ├── PreviewApp.vue   # 预览根组件
-│   ├── post-list.html   # HTML 入口
-│   └── vite.config.ts   # Vite 预览配置（mode=prototype）
-├── mock/
-│   ├── post-list.ts     # 内存 Mock：3 篇文章 + 分类 + 标签
-│   └── post-list.spec.ts  # 单元测试
-└── tsconfig.json
-```
-
-### 生产隔离机制
-
-- 预览入口 `main.ts` 通过 `app.provide("haloPrototypePreview", true)` 注入标记
-- 业务页面通过 `inject("haloPrototypePreview", false)` 读取，默认 `false`（生产模式不注入，保持原有行为）
-- 标记为 `true` 时禁用：PostList 设置弹层 actions、TitleField 编辑路由/extra/description
-- Mock 通过 `axiosInstance.defaults.adapter` 拦截请求，仅匹配文章列表/分类树/标签，未匹配请求显式失败
-- 演示身份仅授予 `system:posts:view` 只读权限
-
-### Mock adapter 工作方式
-
-`postListPreviewAdapter` 解析请求 URL 和 params：
-1. 使用 `new URL(config.url)` 解析 URL query 参数（`URLSearchParams`）
-2. 合并 `config.params`（`Object.assign`）
-3. 按路径匹配返回内存数据
-
-这是因为真实 `consoleApiClient` 会将 keyword 拼进 URL query string，而非仅通过 `config.params` 传递。
-
-## 后续需求开发步骤
-
-### 1. 从预览分支创建需求分支
-
-```bash
-git checkout improvement/prototype-preview
-git pull origin improvement/prototype-preview
-git checkout -b feature/your-feature
-```
-
-### 2. 就地修改既有页面
-
-直接修改 `ui/console-src/modules/contents/posts/PostList.vue` 或相关组件。不要新建近似页面替代真实页面修改。
-
-### 3. 按调用链扩展最小前端 Mock
-
-如果新交互需要额外数据，在 `ui/prototype/mock/post-list.ts` 中添加对应 Mock 响应：
-- 仅提供目标页面显示和关键操作必需的本地数据
-- 未匹配请求显式失败，不回落真实服务
-- 不为可点击所有导航而 Mock 其他模块
-
-### 4. 重新构建导出
-
-```bash
-# 源码变更后需完整重建（Mock 和业务在同一编译链中）
-python3 "$WORKBENCH/scripts/build.py" .prototype/ui/final.json
-```
-
-### 5. 双环境验收
-
-```bash
-node "$WORKBENCH/scripts/browser-cdp.mjs" .prototype/ui/final.json \
-  --executable /usr/bin/chromium-browser
-```
-
-验证 standalone 和 iframe（`srcdoc` + `sandbox=allow-scripts`、`origin=null`）两种环境。
-
-### 6. 交付业务改动
-
-- 业务改动提交到需求分支，不堆回 `improvement/prototype-preview` 共用基座
-- 基础设施修复才经核对后回合预览分支
-- 排除演示适配（Mock、预览入口、`haloPrototypePreview` 注入）不进入主干
-
-## 交付回执
-
-```bash
-python3 "$BOOTSTRAP/scripts/delivery.py" \
-  --repo . \
-  --profile .prototype/ui/profile.json \
-  --workbench "$WORKBENCH" \
-  --selfcheck <自检运行目录> \
-  --run-id <run-id> \
-  --check-remote \
-  --out <输出路径>
-```
-
-## 排障
-
-参见 `docs/prototype-troubleshooting.md`。
+维护自检会使用临时配置并改写本地构建状态；自检结束后，再执行一次固定 `preview.py build` 和 `browser`，恢复正常配置的门禁与报告，不拿临时配置的 sourceHash 冒充正常候选。

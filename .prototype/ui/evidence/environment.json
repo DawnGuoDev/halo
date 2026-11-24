@@ -1,37 +1,34 @@
 {
   "status": "passed",
-  "recipeHash": "2c975ee21544fc13402ca5421a5e9af7a0666b1fb199930a9cb735b3ab347542",
+  "recipeHash": "e16362d6a9b45137b91605ef467e1fb95d8a385223708d43631d9a86eafaea10",
   "inputs": {
     "ui/package.json": "c67a03130615abc381fb72941eb64c02f9b5dcb6116e5c2695cec819459b8e1a",
     "ui/pnpm-lock.yaml": "45c1ba31344fd9dcef27b7888bd6296f09fd0b8d507c3dc414eaa18a2cc074ad",
     "ui/pnpm-workspace.yaml": "188b7eec3546a999d14484ec34cedf1420f597386c1fc82a08dfb2c59dafe1e1",
     "scripts/prototype/environment.py": "e09288169ef4fdfa317eb447307e71b339171395f261598e78516ce0e83220f2",
     "scripts/prototype/probe-node.mjs": "292634f797cb3269c7ac4b9d85473b960aed5c49bdfd4a1db147aacc5227fbeb",
-    "scripts/prototype/setup.sh": "62783a71654691b4b6b8d2208d36387fb97fe7f5388c8923217e194f7791c564"
+    "scripts/prototype/setup.sh": "e238518153cf836dbed7458edc6b3bdfbecbefda99942152f57803c3e461b527",
+    ".prototype/ui/toolchain.json": "78669220eeb22e526bd7d9cb013b14b8604b1c930b17015a14d2a14f300dd818",
+    "scripts/prototype/runtime.py": "e3495e1a19f66a92b6d5acc6fc129a434e1cd352b2bc1af701b10389f500b303",
+    "scripts/prototype/ui.sh": "0c32e6a929bd57ace25759659a1268693ea679e30b968403f557606b4792551a",
+    "scripts/prototype/preflight.py": "97efca27a3008076ff04bdcb7f46c1236d0a62fb090134408cbe13f5163fbaba"
   },
   "probes": [
     {
       "argv": [
-        "node",
-        "../scripts/prototype/probe-node.mjs"
+        "python3",
+        "../scripts/prototype/runtime.py",
+        "versions"
       ],
-      "output": "v24.22.3"
-    },
-    {
-      "argv": [
-        "corepack",
-        "pnpm",
-        "--version"
-      ],
-      "output": "12.4.2"
+      "output": "{\"status\": \"tools-ready\", \"node\": \"v24.22.3\", \"pnpm\": \"12.4.2\", \"scope\": \"runtime-only; dependency install and build are separate\"}"
     }
   ],
   "platform": {
-    "system": "Linux",
-    "machine": "x86_64"
+    "system": "Darwin",
+    "machine": "arm64"
   },
   "exitCode": 0,
-  "seconds": 33.038,
+  "seconds": 1.007,
   "scope": "install-and-version-probes-only",
   "note": "New sandbox must rerun recipe; this is historical evidence, not current readiness."
 }

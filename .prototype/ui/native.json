@@ -17,6 +17,23 @@
       "--filter",
       "@halo-dev/ui-shared",
       "build"
+    ],
+    [
+      "bash",
+      "scripts/prototype/ui.sh",
+      "exec",
+      "vue-tsc",
+      "--noEmit",
+      "-p",
+      "prototype/tsconfig.json"
+    ],
+    [
+      "bash",
+      "scripts/prototype/ui.sh",
+      "exec",
+      "eslint",
+      "prototype/",
+      "--max-warnings=0"
     ]
   ],
   "build": [
@@ -63,7 +80,10 @@
     "ui/packages/shared/tsconfig.app.json",
     "ui/prototype/preview",
     "ui/prototype/mock",
-    "scripts/prototype/ui.sh"
+    "scripts/prototype/ui.sh",
+    ".prototype/ui/toolchain.json",
+    "scripts/prototype/runtime.py",
+    "ui/prototype/tsconfig.json"
   ],
   "outputDir": ".prototype/ui/output/native",
   "entry": ".prototype/ui/output/native/prototype/preview/post-list.html",

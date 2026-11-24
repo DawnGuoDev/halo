@@ -1,0 +1,4 @@
+{
+  "node": "24.22.3",
+  "note": "Validated preview runtime; pnpm comes from ui/package.json. Node must still satisfy engines.node. Official Node SHA256 and npm SHA512 are checked before extraction."
+}

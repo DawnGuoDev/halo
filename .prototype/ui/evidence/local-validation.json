@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "kind": "summary-not-original-reports",
+  "platform": {
+    "system": "Darwin",
+    "machine": "arm64"
+  },
+  "environment": {
+    "freshRepositoryTools": true,
+    "initialHostNode": "v22.23.3",
+    "preparedNode": "v24.22.3",
+    "preparedPnpm": "12.4.2",
+    "frozenInstall": "passed",
+    "repeatInstallSeconds": 1.007
+  },
+  "checks": {
+    "pythonRegressionTests": 4,
+    "mockUnitTests": 3,
+    "previewVueTsc": "passed",
+    "previewEslint": "passed",
+    "selfcheck": "runtime-passed",
+    "sourcePreserved": "passed"
+  },
+  "selfcheckReportSha256": "4776d47725f81377b7223f0aabda42a00b4cda2fe5233c5a751ce7c4a5dc4331",
+  "buildSourceHash": "2652339a5c1398f060bccc44a32508782e0ab89eedae1dafaaae62573877ee11",
+  "entryHash": "d4d6ccd9efd5062fc3eab9437ac9a565b9e3567ba3460bb8dd4bd318b9bcac48",
+  "browser": [
+    {
+      "mode": "standalone",
+      "status": "passed",
+      "origin": "http://127.0.0.1:57655",
+      "errors": []
+    },
+    {
+      "mode": "iframe-srcdoc",
+      "status": "passed",
+      "origin": "null",
+      "errors": []
+    }
+  ],
+  "scope": "Existing PostList and keyword search; real locale edit, rebuild, visible change, restore and rebuild. Profile command aliases added after selfcheck; no build inputs changed by aliases.",
+  "notVerified": [
+    "Linux fresh sandbox recovery",
+    "actual platform preview",
+    "full application lint/typecheck/unit suites",
+    "other pages and interactions"
+  ],
+  "evidenceLocation": "Original build/browser logs and screenshots remain in ignored local .workbench and the external selfcheck run; this tracked file is a portable summary, not a substitute for raw reports."
+}
