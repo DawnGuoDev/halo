@@ -1,0 +1,34 @@
+{
+  "repo": ".",
+  "branch": "improvement/prototype-preview",
+  "revision": "6001fb4ef0ec6e9d262b801a9f92929aa572832a",
+  "baseRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+  "config": ".prototype/ui/final.json",
+  "adapter": "cdp",
+  "executable": "/usr/bin/chromium-browser",
+  "timeoutSeconds": 900,
+  "browserTimeoutSeconds": 300,
+  "cases": {
+    "mode": "interactive",
+    "flows": [
+      {
+        "id": "keyword-search",
+        "scenario": "post-search",
+        "beforeStep": 0,
+        "actionSteps": [
+          1,
+          2
+        ],
+        "afterStep": 3
+      }
+    ]
+  },
+  "rebuild": {
+    "file": "ui/src/locales/zh-CN.json",
+    "before": "共 {total} 项数据",
+    "after": "Halo 文章（重建验证）",
+    "selector": ".pagination__total",
+    "sourceRole": "business-dependency",
+    "sourceEvidence": "PostList.vue passes core.components.pagination.total_label to the real VPagination; ui/prototype/preview/main.ts loads zh-CN through setLanguage, so changing this locale value rebuilds visible text in the actual business pagination, not the preview host or mock data."
+  }
+}
