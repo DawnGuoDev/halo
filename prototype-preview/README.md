@@ -26,7 +26,9 @@ npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 
 | 路由 | 文件 | 说明 |
 | --- | --- | --- |
-| `/#/posts`（默认） | `src/views/PostListView.vue` | 参考真实「文章」列表页：页头 + 筛选 + 实体列表 + 分页 + 设置弹层 |
+| `/#/operations`（默认） | `src/views/operations/OperationsOverviewView.vue` | 站点运营概览：时间范围切换、三项指标、每日趋势、评论最多的文章、最近待审核评论及两个抽屉 |
+| `/#/posts` | `src/views/PostListView.vue` | 参考真实「文章」列表页：页头 + 筛选 + 实体列表 + 分页 + 设置弹层 |
+| `/#/comments` | `src/views/FakeCommentsView.vue` | 占位：承接「评论管理」跳转；回填后指向真实 `/comments` |
 | `/#/demo` | `src/views/ComponentDemoView.vue` | 常用组件示例：按钮、标签、Alert、Tabs、描述列表、开关、Toast |
 
 - 布局与侧栏：`src/layouts/BasicLayout.vue`
@@ -34,11 +36,14 @@ npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 - 样式入口：`src/styles.css`（Tailwind 三层 + 控制台骨架类），组件样式来自 `@halo-dev/components/dist/style.css`
 - 本地 Mock：`src/mock/index.ts`（唯一数据入口）+ `src/mock/data.ts`（固定数据）
 
-## 本次需求 · 文章列表筛选标签
+## 本次需求 · 站点运营概览
 
-当前工程承载「Halo 控制台文章列表筛选体验优化」原型：在筛选区下方显示「当前筛选」可关闭标签、
-「清除全部」，筛选无结果时提供「清除筛选」空态。业务规则见 PRD；实现与回填步骤见
+当前工程在上一需求（文章列表筛选标签）基础上，新增「站点运营概览」原型：最近 7/30 天切换、新增文章/收到评论/待审核评论指标、
+每日趋势（两项开关）、评论最多的 5 篇文章（互动摘要抽屉）、最近 5 条待审核评论（通过 / 驳回二次确认）。
+业务规则见 `artifacts/产品设计/PRD 文档`；实现、Mock 契约、弹层适配与回填步骤见
 [integration-guide.md](./integration-guide.md)，验收记录与截图见 [design-notes.md](./design-notes.md)。
+
+数据入口：`src/mock/operational.ts`（场景参数 `?scenario=…`、`?permission=view`）。
 
 验收数据入口：`preview.json`（独立原型辅助 Skill 的 preview.py / browser.mjs 配置），
 `.prototype-evidence/preview/` 保存构建日志与浏览器报告。
@@ -52,6 +57,8 @@ npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 - 本地 Mock 数据层：搜索、状态/可见性/分类/标签/作者筛选、排序、分页、发布、删除均可交互
 - 文章列表筛选标签：可关闭标签、清除全部、筛选无结果空态、筛选变化回到第 1 页、URL query 同步
 - 迁入真实筛选控件：分类 / 标签 / 作者下拉（源码见 `src/components/filter/`），搜索框按 Enter 提交
+- 站点运营概览：指标与环比、自绘 SVG 趋势图（开关、逐点悬浮）、热门文章 Top5、待审核评论处理、互动摘要/评论详情抽屉、四类空态、区域级加载失败与重试、`?permission=view` 只读
+- 弹层：`src/components/halo/modal/Modal.vue`（原型替身，仅替代 `VModal` 显隐，原因见集成指引 D 节）
 
 ## 尚未纳入的能力
 
@@ -67,6 +74,7 @@ npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 - 仓库 `ui/` 内组件包版本为未发布的 **2.28.0**，npm latest 为 **2.27.0**。工程使用 2.27.0，不整体升级。
 - 2.27.0 缺少 `VFilterDropdown` / `VFilterDropdownGroup` 与其 `IconCheck` 导出：按基线源码迁入 `src/components/halo/filter/`，图标内联替代。上游发包后可直接换回 `@halo-dev/components` 导入并删除该目录。
 - 其余组件均直接使用 npm 包，未做视觉替换。
+- npm 2.27.0 的 `VModal` 在本工程中打开后不可见（`Transition` 钩子未触发，基线文章列表设置弹层同样复现）；原型用最小 `Modal.vue` 替身解决，业务回填使用真实组件，详见 integration-guide D 节。
 
 ## 新增业务页面步骤
 

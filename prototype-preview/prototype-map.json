@@ -5,8 +5,9 @@
   "engineeringRoot": "prototype-preview",
   "businessBaseline": {
     "ref": "main",
-    "revision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
-    "uiComponentsVersion": "@halo-dev/components@2.27.0 (npm latest；仓库源码为未发布的 2.28.0)"
+    "revision": "02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3",
+    "note": "站点运营概览（本次）读取该提交的 dashboard / comments / posts 页面；文章列表筛选原型仍基于 f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+    "uiComponentsVersion": "@halo-dev/components@2.27.0 (npm)；仓库源码为未发布的 2.28.0"
   },
   "referencePage": {
     "sourcePath": "ui/console-src/modules/contents/posts/PostList.vue",
@@ -43,7 +44,7 @@
       "<independent-prototype-assistant>/scripts/browser.mjs",
       "<abs>/prototype-preview/preview.json",
       "--playwright-module",
-      "<abs>/prototype-preview/node_modules/playwright-core/index.mjs",
+      "<abs>/playwright-core/index.mjs",
       "--executable",
       "/usr/bin/chromium-browser"
     ],
@@ -175,10 +176,58 @@
       "targetPath": "src/assets/empty.svg（当前未引用，npm 包已内联同一图形）",
       "usage": "reference",
       "adaptation": "仅作来源核对，运行时使用 @halo-dev/components 内联资源"
+    },
+    {
+      "sourcePath": "ui/console-src/modules/dashboard/components/WidgetCard.vue",
+      "sourceRevision": "02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3",
+      "targetPath": "src/views/operations/OperationalCard.vue",
+      "usage": "rewritten-visual",
+      "adaptation": "保留卡片表面（圆角、白色、1px 描边、标题行），增加描述、右侧工具区与区域级刷新；改用普通 div+Tailwind（WidgetCard 未随包发布）"
+    },
+    {
+      "sourcePath": "ui/console-src/modules/dashboard/widgets/presets/posts/PostStatsWidget.vue, widgets/presets/comments/CommentStatsWidget.vue",
+      "sourceRevision": "02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3",
+      "targetPath": "src/views/operations/MetricCard.vue",
+      "usage": "rewritten-visual",
+      "adaptation": "沿用图标圆底+指标名+大数字布局；去掉 NumberFlow 动画依赖，新增环比徽标（↑绿/↓红/持平）"
+    },
+    {
+      "sourcePath": "ui/console-src/modules/dashboard/widgets/presets/comments/PendingCommentsWidget.vue, CommentItem.vue",
+      "sourceRevision": "02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3",
+      "targetPath": "src/views/operations/OperationsOverviewView.vue",
+      "usage": "rewritten-visual-page",
+      "adaptation": "复用 VEntityContainer/VEntity/VEntityField/VStatusDot 与「评论人 评论了 文章」排列；数据换为 Mock，去掉 useSubjectRef 扩展点与 vue-query"
+    },
+    {
+      "sourcePath": "ui/console-src/modules/contents/comments/components/CommentDetailModal.vue, CommentList.vue",
+      "sourceRevision": "02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3",
+      "targetPath": "src/views/operations/CommentReviewDrawer.vue",
+      "usage": "rewritten-visual",
+      "adaptation": "沿用 VModal 抽屉 + VDescription + 通过/驳回 + Dialog.warning 二次确认 + Toast；内容改为纯文本转义展示并保留换行，去掉编辑器、回复与权限指令"
+    },
+    {
+      "sourcePath": "ui/packages/components/src/components/modal/Modal.vue",
+      "sourceRevision": "02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3",
+      "targetPath": "src/components/halo/modal/Modal.vue",
+      "usage": "copied-and-adapted",
+      "adaptation": "原型替身：保留 props/emits/插槽、结构与 modal-* 样式；显隐改为 v-show、不使用 Teleport，补回 Esc/层点击/焦点恢复/Tab 陷阱；去掉 overlayscrollbars 与 body 滚动锁"
+    },
+    {
+      "sourcePath": "—（控制台无图表库）",
+      "sourceRevision": "02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3",
+      "targetPath": "src/components/trend/OperationsTrendChart.vue",
+      "usage": "new",
+      "adaptation": "自绘 SVG 双折线：按日刻度（30 天抽稀）、逐点悬浮 tooltip、ResizeObserver 自适应"
+    },
+    {
+      "sourcePath": "ui/src/locales/{zh-CN,en}.json",
+      "sourceRevision": "02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3",
+      "targetPath": "src/locales/{zh-CN,en}.json",
+      "usage": "copied-and-extended",
+      "adaptation": "新增 core.operations.* 与 core.sidebar.menu.items.operations/comments 键（原型补译，回填进入业务文案）"
     }
   ],
   "previewOnly": [
-    "src/mock/data.ts",
     "src/mock/index.ts",
     "src/composables/use-resource-queries.ts",
     "src/i18n.ts",
@@ -186,32 +235,48 @@
     "src/views/ComponentDemoView.vue",
     "preview.json",
     "scripts/verify.mjs",
-    "design-notes.md"
+    "design-notes.md",
+    "src/mock/operational.ts",
+    "src/views/operations/*",
+    "src/components/trend/OperationsTrendChart.vue",
+    "src/components/halo/modal/Modal.vue（原型替身）",
+    "src/views/FakeCommentsView.vue",
+    "src/utils/datetime.ts",
+    "screenshot-ops-*.png"
   ],
   "thisTask": {
-    "name": "Halo 控制台文章列表筛选体验优化",
-    "requirement": "artifacts/设计设计/PRD 文档（PRD 文档 v1）",
+    "name": "站点运营概览页面",
+    "requirement": "artifacts/产品设计/PRD 文档（PRD 文档 v1）+ 本轮用户需求",
     "changed": [
-      "src/views/PostListView.vue",
-      "src/components/SearchInput.vue",
-      "src/components/filter/{Category,Tag,User}FilterDropdown.vue",
-      "src/composables/use-post-filters.ts",
-      "src/composables/use-resource-queries.ts",
-      "src/styles.css",
-      "src/mock/{index,data}.ts",
-      "src/types.ts",
-      "src/i18n.ts",
-      "src/locales/*.json",
+      "src/views/operations/{OperationsOverviewView,MetricCard,OperationalCard,ArticleSummaryDrawer,CommentReviewDrawer}.vue",
+      "src/components/trend/OperationsTrendChart.vue",
+      "src/components/halo/modal/Modal.vue（原型替身）",
+      "src/mock/operational.ts",
+      "src/utils/datetime.ts",
+      "src/views/FakeCommentsView.vue",
+      "src/router/index.ts",
+      "src/layouts/BasicLayout.vue",
+      "src/locales/zh-CN.json",
+      "src/locales/en.json",
       "preview.json",
       "README.md",
       "integration-guide.md",
-      "design-notes.md"
+      "prototype-map.json",
+      "design-notes.md",
+      "screenshot-ops-*.png"
     ],
     "preserved": [
-      "页面头部与右上操作",
-      "搜索框/筛选组/刷新图标布局",
-      "「重置」图标与筛选组清除行为",
-      "列表行、行内操作、分页、设置弹层入口"
+      "侧栏骨架与菜单分组",
+      "文章列表筛选标签页及其交互",
+      "组件示例页",
+      "npm @halo-dev/components@2.27.0 依赖与锁文件（未升级、未新增依赖）"
+    ],
+    "notCovered": [
+      "访问量统计、数据导出、自定义时间范围",
+      "真实控制台中的 Modal 行为（未实测）",
+      "<768px 窄屏正式验收"
     ]
-  }
+  },
+  "recordedSourceRevision": "1a64e4f65b97a1c49559e0a02636ae5477b045c3",
+  "taskBranch": "feat/proto-site-ops-overview"
 }

@@ -7,7 +7,8 @@
     "vite.config.ts",
     "tailwind.config.ts",
     "postcss.config.cjs",
-    "index.html"
+    "index.html",
+    "public"
   ],
   "checks": [
     [
@@ -24,205 +25,421 @@
   "entry": "dist/index.html",
   "timeoutSeconds": 240,
   "browser": {
-    "ready": ".page-header",
+    "ready": "[data-testid=ops-overview]",
     "viewport": {
       "width": 1440,
       "height": 900
     },
     "scenarios": [
       {
-        "name": "无筛选时隐藏标签区",
-        "suffix": "#/posts",
+        "name": "默认最近7天指标与趋势",
+        "suffix": "#/operations",
         "steps": [
           {
             "action": "visible",
-            "selector": "[data-testid=post-search-input]"
+            "selector": "[data-testid=range-7][aria-pressed=true]"
           },
           {
-            "action": "hidden",
-            "selector": "[data-testid=active-filters]"
+            "action": "text",
+            "selector": "[data-testid=metric-posts]",
+            "text": "7"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-posts-change]",
+            "text": "↑ 3"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-comments] [data-testid=metric-value]",
+            "text": "28"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-comments-change]",
+            "text": "↑ 6"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-pending] [data-testid=metric-value]",
+            "text": "26"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=trend-line-posts]",
+            "value": 1
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=trend-line-comments]",
+            "value": 1
           },
           {
             "action": "visible",
-            "selector": "[data-testid=post-list]"
+            "selector": "[data-testid=trend-chart]"
           },
           {
             "action": "count",
-            "selector": "[data-testid=post-list] tbody tr",
-            "value": 20
-          }
-        ]
-      },
-      {
-        "name": "筛选显示标签并单独移除",
-        "suffix": "#/posts?status=content.halo.run%2Fpublished%3Dfalse&visible=PRIVATE",
-        "steps": [
-          {
-            "action": "text",
-            "selector": "[data-testid=active-filters]",
-            "text": "状态：未发布"
-          },
-          {
-            "action": "text",
-            "selector": "[data-testid=active-filters]",
-            "text": "可见性：私有"
+            "selector": "[data-testid=hot-list] .entity-wrapper",
+            "value": 5
           },
           {
             "action": "count",
-            "selector": "[data-testid^=filter-tag-]:not([data-testid*=remove])",
-            "value": 2
-          },
-          {
-            "action": "click",
-            "selector": "[data-testid=filter-tag-remove-visible]"
-          },
-          {
-            "action": "hidden",
-            "selector": "[data-testid=filter-tag-visible]"
+            "selector": "[data-testid=pending-list] .entity-wrapper",
+            "value": 5
           },
           {
             "action": "text",
-            "selector": "[data-testid=filter-tag-status]",
-            "text": "状态：未发布"
-          },
-          {
-            "action": "text",
-            "selector": "button[aria-haspopup=listbox]:has-text(\"可见性\")",
-            "text": "可见性：全部"
+            "selector": "[data-testid=hot-article-post-06]",
+            "text": "6 条评论"
           }
         ]
       },
       {
-        "name": "回车搜索生成关键词标签并清除",
-        "suffix": "#/posts",
-        "steps": [
-          {
-            "action": "fill",
-            "selector": "[data-testid=post-search-input]",
-            "value": "Halo"
-          },
-          {
-            "action": "press",
-            "selector": "[data-testid=post-search-input]",
-            "key": "Enter"
-          },
-          {
-            "action": "text",
-            "selector": "[data-testid=filter-tag-keyword]",
-            "text": "关键词：Halo"
-          },
-          {
-            "action": "click",
-            "selector": "[data-testid=filter-tag-remove-keyword]"
-          },
-          {
-            "action": "hidden",
-            "selector": "[data-testid=filter-tag-keyword]"
-          },
-          {
-            "action": "hidden",
-            "selector": "[data-testid=post-search-clear]"
-          }
-        ]
-      },
-      {
-        "name": "清除全部恢复默认",
-        "suffix": "#/posts?status=content.halo.run%2Fpublished%3Dfalse&visible=PRIVATE",
+        "name": "切换30天同步更新且开关保持",
+        "suffix": "#/operations",
         "steps": [
           {
             "action": "click",
-            "selector": "[data-testid=clear-all-filters]"
-          },
-          {
-            "action": "hidden",
-            "selector": "[data-testid=active-filters]"
-          },
-          {
-            "action": "visible",
-            "selector": "[data-testid=post-list]"
-          }
-        ]
-      },
-      {
-        "name": "筛选变化回到第一页",
-        "suffix": "#/posts?page=2",
-        "steps": [
-          {
-            "action": "text",
-            "selector": "[data-testid=post-pagination]",
-            "text": "2 / 2"
-          },
-          {
-            "action": "click",
-            "selector": "button[aria-haspopup=listbox]:has-text(\"状态\")"
-          },
-          {
-            "action": "click",
-            "selector": "[role=option]:has-text(\"未发布\")"
-          },
-          {
-            "action": "text",
-            "selector": "[data-testid=filter-tag-status]",
-            "text": "状态：未发布"
-          },
-          {
-            "action": "text",
-            "selector": "[data-testid=post-pagination]",
-            "text": "1 / 1"
-          },
-          {
-            "action": "text",
-            "selector": "[data-testid=active-filters]",
-            "text": "清除全部"
-          }
-        ]
-      },
-      {
-        "name": "筛选无结果清除筛选",
-        "suffix": "#/posts?category=tag-%E4%B8%8D%E5%AD%98%E5%9C%A8&tag=tag-%E4%B8%8D%E5%AD%98%E5%9C%A8",
-        "steps": [
-          {
-            "action": "text",
-            "selector": ".empty-title",
-            "text": "没有符合筛选条件的文章"
+            "selector": "[data-testid=toggle-posts] button"
           },
           {
             "action": "count",
-            "selector": "[data-testid=empty-clear-filters]",
+            "selector": "[data-testid=trend-line-posts]",
+            "value": 0
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=trend-line-comments]",
             "value": 1
           },
           {
             "action": "click",
-            "selector": "[data-testid=empty-clear-filters]"
-          },
-          {
-            "action": "hidden",
-            "selector": "[data-testid=active-filters]"
+            "selector": "[data-testid=range-30]"
           },
           {
             "action": "visible",
-            "selector": "[data-testid=post-list]"
+            "selector": "[data-testid=range-30][aria-pressed=true]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-posts] [data-testid=metric-value]",
+            "text": "19"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-comments] [data-testid=metric-value]",
+            "text": "75"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-pending] [data-testid=metric-value]",
+            "text": "26"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=hot-article-post-12]",
+            "text": "8 条评论"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=trend-line-posts]",
+            "value": 0
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=trend-line-comments]",
+            "value": 1
           }
         ]
       },
       {
-        "name": "站点无文章保留原空态",
-        "suffix": "?scenario=empty#/posts",
+        "name": "关闭全部趋势开关显示提示",
+        "suffix": "#/operations",
         "steps": [
           {
+            "action": "click",
+            "selector": "[data-testid=toggle-posts] button"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=toggle-comments] button"
+          },
+          {
             "action": "text",
-            "selector": ".empty-title",
-            "text": "当前没有文章"
+            "selector": "[data-testid=trend-body]",
+            "text": "请选择至少一项要显示的指标"
           },
           {
             "action": "count",
-            "selector": "[data-testid=empty-clear-filters]",
+            "selector": "[data-testid=trend-chart]",
             "value": 0
           },
           {
+            "action": "click",
+            "selector": "[data-testid=range-30]"
+          },
+          {
             "action": "text",
-            "selector": ".empty-actions",
-            "text": "新建"
+            "selector": "[data-testid=trend-body]",
+            "text": "请选择至少一项要显示的指标"
+          }
+        ]
+      },
+      {
+        "name": "热门文章打开互动摘要",
+        "suffix": "#/operations",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "[data-testid=hot-article-post-01]"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=article-summary-drawer]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=summary-total]",
+            "text": "11"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=summary-comment-item]",
+            "value": 5
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=summary-approve],[data-testid=comment-approve]",
+            "value": 0
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=summary-close]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=article-summary-drawer]"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=hot-list]"
+          }
+        ]
+      },
+      {
+        "name": "驳回取消数据不变",
+        "suffix": "#/operations",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "[data-testid=pending-list] .entity-wrapper >> nth=0"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=comment-content]",
+            "text": "CSS 变量"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=comment-reject]"
+          },
+          {
+            "action": "text",
+            "selector": ".dialog-container",
+            "text": "驳回后评论不会公开显示，可在评论管理中重新审核"
+          },
+          {
+            "action": "click",
+            "selector": ".dialog-container button:has-text('取消')"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=comment-review-drawer]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-pending] [data-testid=metric-value]",
+            "text": "26"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=pending-list] .entity-wrapper",
+            "value": 5
+          }
+        ]
+      },
+      {
+        "name": "驳回确认后计数减一且列表补位",
+        "suffix": "#/operations",
+        "steps": [
+          {
+            "action": "count",
+            "selector": "[data-testid=pending-comment-comment-011]",
+            "value": 0
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=pending-list] .entity-wrapper >> nth=0"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=comment-reject]"
+          },
+          {
+            "action": "click",
+            "selector": ".dialog-container button:has-text('确认驳回')"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=comment-review-drawer]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-pending] [data-testid=metric-value]",
+            "text": "25"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=pending-list] .entity-wrapper",
+            "value": 5
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=pending-comment-comment-011]",
+            "value": 1
+          }
+        ]
+      },
+      {
+        "name": "通过后计数同步并关闭抽屉",
+        "suffix": "#/operations",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "[data-testid=pending-list] .entity-wrapper >> nth=0"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=comment-approve]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=comment-review-drawer]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-pending] [data-testid=metric-value]",
+            "text": "25"
+          }
+        ]
+      },
+      {
+        "name": "无管理权限隐藏审批按钮",
+        "suffix": "?permission=view#/operations",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "[data-testid=pending-list] .entity-wrapper >> nth=0"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=comment-content]"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=comment-approve]",
+            "value": 0
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=comment-reject]",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "name": "区域局部失败可重试",
+        "suffix": "?scenario=pending-error#/operations",
+        "steps": [
+          {
+            "action": "text",
+            "selector": "[data-testid=pending-body]",
+            "text": "加载失败，点击重试"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=hot-list]"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=pending-retry]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=pending-body]",
+            "text": "加载失败，点击重试"
+          }
+        ]
+      },
+      {
+        "name": "没有待审核评论显示空态",
+        "suffix": "?scenario=pending-empty#/operations",
+        "steps": [
+          {
+            "action": "text",
+            "selector": "[data-testid=pending-body]",
+            "text": "当前没有待审核评论"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-pending] [data-testid=metric-value]",
+            "text": "0"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=pending-list]",
+            "value": 0
+          }
+        ]
+      },
+      {
+        "name": "区间无数据展示空态并可切到30天",
+        "suffix": "?scenario=empty#/operations",
+        "steps": [
+          {
+            "action": "text",
+            "selector": "[data-testid=trend-body]",
+            "text": "所选时间范围内暂无数据"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=hot-body]",
+            "text": "所选时间范围内暂无文章评论"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-posts] [data-testid=metric-value]",
+            "text": "0"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-posts-change]",
+            "text": "持平"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=range-30]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=metric-posts] [data-testid=metric-value]",
+            "text": "0"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=trend-body]",
+            "text": "所选时间范围内暂无数据"
           }
         ]
       }
@@ -249,7 +466,13 @@
     "design-notes.md",
     "screenshot-filters-active.png",
     "screenshot-keyword-active.png",
-    "screenshot-filtered-empty.png"
+    "screenshot-filtered-empty.png",
+    "screenshot-ops-7d.png",
+    "screenshot-ops-30d.png",
+    "screenshot-ops-summary.png",
+    "screenshot-ops-comment-drawer.png",
+    "screenshot-ops-reject-confirm.png",
+    "screenshot-ops-empty.png"
   ],
   "serveRoot": "dist",
   "deliveryRoles": {
@@ -275,7 +498,13 @@
       "design-notes.md",
       "screenshot-filters-active.png",
       "screenshot-keyword-active.png",
-      "screenshot-filtered-empty.png"
+      "screenshot-filtered-empty.png",
+      "screenshot-ops-7d.png",
+      "screenshot-ops-30d.png",
+      "screenshot-ops-summary.png",
+      "screenshot-ops-comment-drawer.png",
+      "screenshot-ops-reject-confirm.png",
+      "screenshot-ops-empty.png"
     ]
   }
 }
