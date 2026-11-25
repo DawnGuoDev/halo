@@ -12,9 +12,9 @@
 | 登记所在基准分支 | `main` |
 | 原型分支 | `prototype-preview` |
 | 工程目录 | `prototype-preview/`，相对原型分支根目录 |
-| 已有验收记录对应提交 | `1a64e4f65b97a1c49559e0a02636ae5477b045c3` |
+| 已有验收记录对应提交 | `1a64e4f65b97a1c49559e0a02636ae5477b045c3`（文章列表筛选）<br>`efd05f487112db04701f577858b1278fbef3cd85`（站点运营概览，任务分支 `feat/proto-site-ops-overview`，远端已推送） |
 | 初始基座提交 | `f05f3721afa84a8b598c013a2d8e1317896b4666` |
-| 业务来源基线 | `main@f6c046cc27e2b5d61367b85792b6cd51bd9101f1` |
+| 业务来源基线 | `main@f6c046cc27e2b5d61367b85792b6cd51bd9101f1`（文章列表筛选）<br>`main@02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3`（站点运营概览） |
 | 登记日期 | 2026-11-25 |
 
 原型分支后续可能继续更新，最新 HEAD 不自动代表已经验证。
@@ -35,7 +35,7 @@ npm run build
 npm run preview
 ```
 
-构建成功后打开 `http://localhost:4173/#/posts`；组件示例为 `/#/demo`。
+构建成功后打开 `http://localhost:4173/#/operations`（站点运营概览，默认路由）或 `/#/posts`（文章列表筛选）；组件示例为 `/#/demo`。
 开发服务使用 `npm run dev`（端口 5173）。工程使用 Vue、TypeScript、Vite、Tailwind，
 运行依赖 `@halo-dev/components@2.27.0`，部分筛选组件由业务仓库 2.28.0 源码迁入。
 依赖和命令以指定提交的 `package.json`、锁文件及工程 README 为准。
@@ -60,6 +60,12 @@ npm run preview
 此登记依据已提交的验收记录及本次监控结果；登记时未在本地重跑构建或浏览器验收。
 原始 `.prototype-evidence/` 回执未随该提交收录；需要复查时按配置重新执行受影响检查。
 平台制品此前报告回读通过，在线入口未实测，不据此宣称平台在线验证通过。
+
+站点运营概览（任务分支 `feat/proto-site-ops-overview`，提交 `efd05f48`）在该提交上增量实现：
+`src/views/operations/`、`src/components/trend/`、`src/mock/operational.ts`、路由 `/operations` 与菜单「运营概览」；
+`preview.json` 共 11 个场景，构建与浏览器验收全部通过（回执 `.prototype-evidence/preview/`，未随提交收录）。
+npm `@halo-dev/components@2.27.0` 的 `VModal` 在本独立工程中打开后不可见（基线文章列表设置弹层同样复现），
+因此用最小 `src/components/halo/modal/Modal.vue` 替身；业务回填使用真实组件，真实控制台行为未实测。
 
 已知限制：采用独立外壳和本地 Mock；搜索框等存在适配，不能视作完整业务源码直搬。
 权限、批量操作、设置表单及英文视觉未纳入本次业务验收；国际化、组件版本与回填差异
