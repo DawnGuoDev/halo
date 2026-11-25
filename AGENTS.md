@@ -12,6 +12,13 @@ Halo is a full-stack monorepo: Java 21 / Spring Boot WebFlux + R2DBC backend and
 | Application BOM     | `platform/application/` (shared dependency constraints)   |
 | Plugin BOM          | `platform/plugin/` (plugin-facing constraints)            |
 
+## Prototype Engineering
+
+For prototype tasks, first read [the prototype engineering record](docs/prototype-engine.md).
+Reuse its prototype branch, engineering directory, and verified commit before deciding
+whether initialization is needed. The prototype runs independently with frontend Mock
+data; do not start the business backend to preview it.
+
 ## Quick Commands
 
 Run from the repo root:
