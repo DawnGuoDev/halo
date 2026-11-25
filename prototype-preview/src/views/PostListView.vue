@@ -51,10 +51,14 @@ import {
   type ListPostsResult,
 } from "@/mock";
 import type { MockPost } from "@/types";
+import PostQuickViewDrawer from "@/components/post/PostQuickViewDrawer.vue";
+import { setLastEditTarget } from "@/composables/use-post-edit";
 
 // 参考业务仓库 ui/console-src/modules/contents/posts/PostList.vue（基线 f6c046cc2）：
 // 页头 + 筛选 + 实体列表 + 分页 + 设置弹层保持原有结构与行为；
-// 本次新增：筛选区下方的「当前筛选」可关闭标签行、筛选无结果空态。
+// 本次新增 1：筛选区下方的「当前筛选」可关闭标签行、筛选无结果空态。
+// 本次新增 2（文章信息速览）：行尾「速览」按钮 + 右侧抽屉；抽屉打开状态只在本页内存中，
+// 不写入 URL，因此关闭/Esc/编辑后返回时筛选与页码天然保留。
 const route = useRoute();
 const router = useRouter();
 const { writeFilters, clearAll } = usePostFilters();
@@ -109,6 +113,14 @@ function updateSort(value?: string | number | boolean | null) {
 
 function clearActiveFilter(key: (typeof FILTER_KEYS)[number]) {
   updateFilter(key, undefined);
+}
+
+// 仅改页码：同步到 URL，不触发筛选重置
+function handlePageChange(value: number) {
+  page.value = value;
+  const query = { ...route.query, page: value === 1 ? undefined : String(value) };
+  if (query.page === undefined) delete query.page;
+  router.replace({ query });
 }
 
 const hasActiveFilters = computed(() =>
@@ -212,14 +224,6 @@ watch(
   { immediate: true }
 );
 
-// 仅改页码：同步到 URL，不触发筛选重置
-function handlePageChange(value: number) {
-  page.value = value;
-  const query = { ...route.query, page: value === 1 ? undefined : String(value) };
-  if (query.page === undefined) delete query.page;
-  router.replace({ query });
-}
-
 function handleSizeChange(value: number) {
   size.value = value;
 }
@@ -227,6 +231,35 @@ function handleSizeChange(value: number) {
 function openSettings(post: MockPost) {
   selectedPost.value = post;
   settingModalVisible.value = true;
+}
+
+// 文章信息速览：以「最后点击的那篇文章」为唯一数据源，切换时整份替换，避免上一篇残留
+const quickViewPost = ref<MockPost>();
+let lastTriggerName = "";
+const quickViewOpen = computed(() => !!quickViewPost.value);
+
+function openQuickView(post: MockPost) {
+  lastTriggerName = post.name;
+  quickViewPost.value = post;
+}
+
+function closeQuickView() {
+  quickViewPost.value = undefined;
+  // 焦点回到触发「速览」的按钮（VModal 也会尝试恢复原焦点，二者指向同一按钮）；
+  // 等 Modal 的 200ms 关闭动画结束、焦点陷阱解除后再聚焦，避免被拦截
+  window.setTimeout(() => {
+    document
+      .querySelector<HTMLElement>(`[data-testid="quick-view-${lastTriggerName}"]`)
+      ?.focus({ preventScroll: true });
+  }, 260);
+}
+
+function handleQuickViewEdit(post: MockPost) {
+  const back = router.resolve({ path: "/posts", query: route.query }).fullPath;
+  setLastEditTarget(post.name);
+  quickViewPost.value = undefined;
+  lastTriggerName = "";
+  router.push({ name: "PostEditor", query: { name: post.name, back } });
 }
 
 async function handlePublish(post: MockPost) {
@@ -451,7 +484,9 @@ function publishedText(post: MockPost) {
           v-for="post in result.items"
           :key="post.name"
           :data-testid="`post-row-${post.name}`"
-          :is-selected="selectedPost?.name === post.name"
+          :is-selected="
+            selectedPost?.name === post.name || quickViewPost?.name === post.name
+          "
           @click="openSettings(post)"
         >
           <template #start>
@@ -517,6 +552,24 @@ function publishedText(post: MockPost) {
             <VEntityField>
               <template #description>
                 <span class="text-xs text-gray-500">{{ post.updateTime }}</span>
+              </template>
+            </VEntityField>
+            <!-- 本次新增：速览入口，位于操作菜单（⋯）左侧；悬停或键盘聚焦时显示 -->
+            <VEntityField>
+              <template #description>
+                <button
+                  type="button"
+                  :data-testid="`quick-view-${post.name}`"
+                  :aria-label="
+                    t('core.post.quick_view.open', { title: post.title })
+                  "
+                  aria-haspopup="dialog"
+                  :aria-expanded="quickViewPost?.name === post.name"
+                  class="quick-view-trigger"
+                  @click.stop="openQuickView(post)"
+                >
+                  {{ t("core.post.quick_view.trigger") }}
+                </button>
               </template>
             </VEntityField>
           </template>
@@ -606,4 +659,12 @@ function publishedText(post: MockPost) {
       </VSpace>
     </template>
   </VModal>
+
+  <!-- 速览抽屉：关闭时保留组件实例（v-show），只清空数据，避免反复挂载/卸载与焦点抖动 -->
+  <PostQuickViewDrawer
+    v-if="quickViewOpen"
+    :post="quickViewPost"
+    @close="closeQuickView"
+    @edit="handleQuickViewEdit"
+  />
 </template>

@@ -28,6 +28,8 @@ export interface MockPost {
   visible: MockVisible;
   published: boolean;
   scheduling: boolean;
+  /** 发布进行中：spec.publish=true 但 published/scheduling 标签尚未就绪（列表显示「发布中」） */
+  publicizing?: boolean;
   publishTime?: string;
   updateTime: string;
   categories: string[];

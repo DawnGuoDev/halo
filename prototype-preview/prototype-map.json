@@ -175,6 +175,34 @@
       "targetPath": "src/assets/empty.svg（当前未引用，npm 包已内联同一图形）",
       "usage": "reference",
       "adaptation": "仅作来源核对，运行时使用 @halo-dev/components 内联资源"
+    },
+    {
+      "sourcePath": "ui/packages/components/src/components/modal/Modal.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "@halo-dev/components@2.27.0 VModal（npm 包）",
+      "usage": "reused-runtime-component",
+      "adaptation": "抽屉直接使用 npm 包的 VModal：遮罩、关闭按钮事件、Esc、焦点陷阱/恢复、visible+close 契约与 2.28.0 源码一致；仅通过 :centered=false、height=100%、width=420 与局部 CSS 改为右侧全高面板。2.27.0 包在挂载时 visible 已为 true 不会播放进入过渡，抽屉改为 ref(false)→onMounted 置 true（与 2.28.0 源码写法一致）"
+    },
+    {
+      "sourcePath": "ui/console-src/modules/contents/posts/PostList.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/views/PostListView.vue",
+      "usage": "copied-and-adapted",
+      "adaptation": "v2 增量：行尾 #end 区新增「速览」按钮（操作菜单左侧，@click.stop 阻止打开设置弹层）；新增 quickViewPost 本地状态与打开/关闭/编辑处理；关闭后 260ms 将焦点还给触发按钮。其余筛选/分页/设置弹层行为不变"
+    },
+    {
+      "sourcePath": "ui/console-src/modules/contents/posts/components/entity-fields/PublishStatusField.vue, PublishTimeField.vue, VisibleField.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/post/PostQuickViewDrawer.vue",
+      "usage": "rewritten-visual",
+      "adaptation": "抽屉状态/可见性/发布时间字段参考三个 entity-field 的口径与图标（VStatusDot、IconEye/IconEyeOff）；原文只有图标或相对时间，抽屉按 PRD 展示文字值与精确时间，未复用组件源码"
+    },
+    {
+      "sourcePath": "ui/src/components/entity-fields/EntityFieldItems.vue, StatusDotField.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/views/PostListView.vue（VEntity #end 直接写字段）",
+      "usage": "reference",
+      "adaptation": "列表行仍是原型既有的手写 #end 字段；速览入口沿用实体行字段区位置（操作菜单之前）"
     }
   ],
   "previewOnly": [
@@ -189,29 +217,30 @@
     "design-notes.md"
   ],
   "thisTask": {
-    "name": "Halo 控制台文章列表筛选体验优化",
-    "requirement": "artifacts/设计设计/PRD 文档（PRD 文档 v1）",
+    "name": "Halo 控制台文章列表 · 文章信息速览",
+    "requirement": "artifacts/产品设计/PRD 文档（PRD v2：REQ-001 / REQ-002）",
+    "baselineCommit": "1a64e4f65b97a1c49559e0a02636ae5477b045c3",
     "changed": [
       "src/views/PostListView.vue",
-      "src/components/SearchInput.vue",
-      "src/components/filter/{Category,Tag,User}FilterDropdown.vue",
-      "src/composables/use-post-filters.ts",
-      "src/composables/use-resource-queries.ts",
+      "src/components/post/PostQuickViewDrawer.vue（新增）",
+      "src/views/PostEditPlaceholderView.vue（新增，编辑器占位）",
+      "src/composables/use-post-edit.ts（新增）",
+      "src/router/index.ts",
       "src/styles.css",
-      "src/mock/{index,data}.ts",
       "src/types.ts",
-      "src/i18n.ts",
-      "src/locales/*.json",
+      "src/mock/{index,data}.ts",
+      "src/locales/{zh-CN,en}.json",
       "preview.json",
       "README.md",
       "integration-guide.md",
-      "design-notes.md"
+      "design-notes.md",
+      "prototype-map.json"
     ],
     "preserved": [
-      "页面头部与右上操作",
-      "搜索框/筛选组/刷新图标布局",
-      "「重置」图标与筛选组清除行为",
-      "列表行、行内操作、分页、设置弹层入口"
+      "页头与右上操作",
+      "搜索框/筛选组/刷新图标布局与 URL query 同步",
+      "「当前筛选」标签行与筛选无结果空态",
+      "列表行字段（访问量、状态、最近更新）、行内操作菜单、分页、设置弹层入口"
     ]
   }
 }

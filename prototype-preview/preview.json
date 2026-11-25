@@ -225,6 +225,301 @@
             "text": "新建"
           }
         ]
+      },
+      {
+        "name": "速览抽屉展示文章信息",
+        "suffix": "#/posts",
+        "steps": [
+          {
+            "action": "hidden",
+            "selector": "[data-testid=quick-view-drawer]"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=quick-view-post-01]"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=quick-view-drawer]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-post-title]",
+            "text": "欢迎使用 Halo：五分钟完成站点搭建",
+            "exact": true
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-status]",
+            "text": "已发布"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-visible]",
+            "text": "公开"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=quick-view-categories] .tag-wrapper",
+            "value": 2
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-categories]",
+            "text": "默认分类"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-tags]",
+            "text": "入门"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-tags]",
+            "text": "部署"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-publish-time]",
+            "text": "2026-11-15 00:12"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-update-time]",
+            "text": "2026-11-16 07:25"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=quick-view-edit]"
+          }
+        ]
+      },
+      {
+        "name": "空分类标签与未发布占位",
+        "suffix": "#/posts",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "[data-testid=quick-view-post-04]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-post-title]",
+            "text": "从 1.x 迁移到 2.x 的注意事项",
+            "exact": true
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-categories-empty]",
+            "text": "未设置分类"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-publish-time-empty]",
+            "text": "未发布"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-tags]",
+            "text": "发布"
+          }
+        ]
+      },
+      {
+        "name": "无标签也显示占位",
+        "suffix": "#/posts",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "[data-testid=quick-view-post-07]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-post-title]",
+            "text": "标签与分类的组织方式",
+            "exact": true
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-categories-empty]",
+            "text": "未设置分类"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-tags-empty]",
+            "text": "未设置标签"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-status]",
+            "text": "已发布"
+          }
+        ]
+      },
+      {
+        "name": "定时发布与发布中状态",
+        "suffix": "#/posts?sort=status.lastModifyTime,desc",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "[data-testid=quick-view-post-12]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-status]",
+            "text": "定时发布"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-publish-time]",
+            "text": "2026-11-04 19:49"
+          }
+        ]
+      },
+      {
+        "name": "连续查看与Esc保持筛选页码",
+        "suffix": "#/posts?visible=PRIVATE",
+        "steps": [
+          {
+            "action": "text",
+            "selector": "[data-testid=filter-tag-visible]",
+            "text": "可见性：私有"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=quick-view-post-10]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-post-title]",
+            "text": "为文章添加自定义模板",
+            "exact": true
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-visible]",
+            "text": "私有"
+          },
+          {
+            "action": "press",
+            "selector": "[data-testid=quick-view-drawer]",
+            "key": "Escape"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=quick-view-drawer]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=filter-tag-visible]",
+            "text": "可见性：私有"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=post-list] tbody tr",
+            "value": 8
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=quick-view-post-30]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-post-title]",
+            "text": "编写可维护的主题样式",
+            "exact": true
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-categories]",
+            "text": "文档"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-publish-time]",
+            "text": "2025-12-05 10:35"
+          },
+          {
+            "action": "press",
+            "selector": "[data-testid=quick-view-drawer]",
+            "key": "Escape"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=quick-view-drawer]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=filter-tag-visible]",
+            "text": "可见性：私有"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=post-list] tbody tr",
+            "value": 8
+          }
+        ]
+      },
+      {
+        "name": "编辑文章后返回保持页码关闭抽屉",
+        "suffix": "#/posts?page=2&size=30",
+        "steps": [
+          {
+            "action": "text",
+            "selector": "[data-testid=post-pagination]",
+            "text": "2 / 2"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=quick-view-post-31]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=quick-view-post-title]",
+            "text": "文章摘要与 SEO 描述",
+            "exact": true
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=quick-view-edit]"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=post-editor-placeholder]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=editor-post-title]",
+            "text": "文章摘要与 SEO 描述",
+            "exact": true
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=quick-view-drawer]"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=editor-back]"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=post-list]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=quick-view-drawer]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=post-pagination]",
+            "text": "2 / 2"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=post-pagination]",
+            "text": "共 40 项数据"
+          }
+        ]
       }
     ]
   },
@@ -249,7 +544,11 @@
     "design-notes.md",
     "screenshot-filters-active.png",
     "screenshot-keyword-active.png",
-    "screenshot-filtered-empty.png"
+    "screenshot-filtered-empty.png",
+    "screenshot-quick-view-entry.png",
+    "screenshot-quick-view-drawer.png",
+    "screenshot-quick-view-empty.png",
+    "screenshot-editor-placeholder.png"
   ],
   "serveRoot": "dist",
   "deliveryRoles": {
@@ -275,7 +574,11 @@
       "design-notes.md",
       "screenshot-filters-active.png",
       "screenshot-keyword-active.png",
-      "screenshot-filtered-empty.png"
+      "screenshot-filtered-empty.png",
+      "screenshot-quick-view-entry.png",
+      "screenshot-quick-view-drawer.png",
+      "screenshot-quick-view-empty.png",
+      "screenshot-editor-placeholder.png"
     ]
   }
 }

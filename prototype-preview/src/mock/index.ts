@@ -144,6 +144,10 @@ export async function listPosts(params: ListPostsParams): Promise<ListPostsResul
   };
 }
 
+export function getPost(name: string): MockPost | undefined {
+  return mockPosts.find((item) => item.name === name);
+}
+
 export async function listCategoryTree(): Promise<MockCategory[]> {
   await delay(60);
   return mockCategories;

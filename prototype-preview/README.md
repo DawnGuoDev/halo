@@ -27,6 +27,7 @@ npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 | 路由 | 文件 | 说明 |
 | --- | --- | --- |
 | `/#/posts`（默认） | `src/views/PostListView.vue` | 参考真实「文章」列表页：页头 + 筛选 + 实体列表 + 分页 + 设置弹层 |
+| `/#/posts/edit?name=<文章名>&back=<列表完整路径>` | `src/views/PostEditPlaceholderView.vue` | 「编辑文章」占位页：验证跳转与返回列表（筛选/页码恢复、抽屉关闭） |
 | `/#/demo` | `src/views/ComponentDemoView.vue` | 常用组件示例：按钮、标签、Alert、Tabs、描述列表、开关、Toast |
 
 - 布局与侧栏：`src/layouts/BasicLayout.vue`
@@ -34,11 +35,24 @@ npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 - 样式入口：`src/styles.css`（Tailwind 三层 + 控制台骨架类），组件样式来自 `@halo-dev/components/dist/style.css`
 - 本地 Mock：`src/mock/index.ts`（唯一数据入口）+ `src/mock/data.ts`（固定数据）
 
-## 本次需求 · 文章列表筛选标签
+## 本次需求 · 文章信息速览（v2）
 
-当前工程承载「Halo 控制台文章列表筛选体验优化」原型：在筛选区下方显示「当前筛选」可关闭标签、
-「清除全部」，筛选无结果时提供「清除筛选」空态。业务规则见 PRD；实现与回填步骤见
-[integration-guide.md](./integration-guide.md)，验收记录与截图见 [design-notes.md](./design-notes.md)。
+当前工程承载「Halo 控制台文章列表 · 文章信息速览」原型：每行操作菜单左侧新增「速览」入口，
+点击后右侧抽屉展示标题、状态、可见性、分类、标签、发布时间、最近更新时间，底部「编辑文章」；
+支持关闭按钮 / Esc 关闭、遮罩不关闭、连续查看只显示最后点击的文章，关闭后筛选与页码不变。
+
+上一轮（v1）的「文章列表筛选标签」能力（当前筛选标签行、清除全部、筛选无结果空态）继续保留。
+业务规则见 PRD v2；实现与回填步骤见 [integration-guide.md](./integration-guide.md)，
+验收记录与截图见 [design-notes.md](./design-notes.md)。
+
+速览相关文件：
+
+| 路径 | 说明 |
+| --- | --- |
+| `src/components/post/PostQuickViewDrawer.vue` | 右侧抽屉内容与关闭/编辑事件 |
+| `src/views/PostListView.vue` | 行内「速览」入口、抽屉打开状态（仅内存，不写 URL） |
+| `src/views/PostEditPlaceholderView.vue` | 「编辑文章」跳转的编辑器占位页（业务编辑器未迁入） |
+| `src/styles.css` | `.quick-view-trigger`（悬停入口）与 `.quick-view-drawer`（右侧面板布局） |
 
 验收数据入口：`preview.json`（独立原型辅助 Skill 的 preview.py / browser.mjs 配置），
 `.prototype-evidence/preview/` 保存构建日志与浏览器报告。
@@ -51,6 +65,7 @@ npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 - 从业务源码迁入的 `VFilterDropdown` / `VFilterDropdownGroup`（见下方「版本差异」）
 - 本地 Mock 数据层：搜索、状态/可见性/分类/标签/作者筛选、排序、分页、发布、删除均可交互
 - 文章列表筛选标签：可关闭标签、清除全部、筛选无结果空态、筛选变化回到第 1 页、URL query 同步
+- 文章信息速览：行尾悬停「速览」、右侧抽屉（`VModal` 能力 + 贴右样式）、空值占位、定时发布/发布中状态、Esc/关闭按钮、连续切换无残留、编辑占位页往返
 - 迁入真实筛选控件：分类 / 标签 / 作者下拉（源码见 `src/components/filter/`），搜索框按 Enter 提交
 
 ## 尚未纳入的能力

@@ -146,5 +146,21 @@
   "core.post.filters.active.keyword.label": "Keyword",
   "core.post.empty_filtered.title": "No posts match the filters",
   "core.post.empty_filtered.message": "There are no posts with the current filters. Clear the filters to see all posts.",
-  "core.post.empty_filtered.clear": "Clear filters"
+  "core.post.empty_filtered.clear": "Clear filters",
+  "core.post.quick_view.title": "Post overview",
+  "core.post.quick_view.trigger": "Overview",
+  "core.post.quick_view.open": "Overview of {title}",
+  "core.post.quick_view.edit": "Edit post",
+  "core.post.quick_view.status.draft": "Draft",
+  "core.post.quick_view.status.scheduling": "Scheduled",
+  "core.post.quick_view.fields.visible": "Visibility",
+  "core.post.quick_view.fields.publish_time": "Publish time",
+  "core.post.quick_view.fields.update_time": "Last updated",
+  "core.post.quick_view.empty.categories": "No category set",
+  "core.post.quick_view.empty.tags": "No tags set",
+  "core.post.quick_view.empty.publish_time": "Not published",
+  "core.post.editor.title": "Edit post",
+  "core.post.editor.placeholder": "Prototype placeholder: the rich-text post editor is not part of this standalone project; this page only verifies navigating from the overview drawer and returning to the list.",
+  "core.post.editor.back_hint": "Back to the post list restores the previous filters and page; the overview drawer stays closed.",
+  "core.common.tooltips.publishing": "Publishing"
 }
