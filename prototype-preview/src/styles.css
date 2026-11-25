@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 派生自业务仓库 ui/console-src/layouts/BasicLayout.vue 的骨架尺寸（侧栏 16rem、白色表面、1px 边框分层） */
+@layer base {
+  :root {
+    --halo-primary: #4ccba0;
+  }
+
+  body {
+    @apply bg-gray-100 text-gray-900 antialiased;
+    font-family:
+      ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+      "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    font-size: 14px;
+  }
+}
+
+@layer components {
+  .console-layout {
+    @apply flex min-h-screen;
+  }
+
+  .console-sidebar {
+    @apply fixed hidden h-full w-64 flex-col overflow-y-auto bg-white shadow md:flex;
+  }
+
+  .console-sidebar__section {
+    @apply flex-1 overflow-y-auto;
+  }
+
+  .console-main {
+    @apply flex w-full flex-1 flex-col pb-12 md:ml-64 md:w-[calc(100%-16rem)] md:pb-0;
+  }
+
+  .console-footer {
+    @apply mt-auto p-4 text-center text-sm text-gray-600;
+  }
+
+  .console-menu-label {
+    @apply px-3 pb-1 pt-4 text-xs font-medium text-gray-500;
+  }
+}

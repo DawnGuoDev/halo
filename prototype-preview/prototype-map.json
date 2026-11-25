@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "repository": "DawnGuoDev/halo",
+  "prototypeBranch": "prototype-preview",
+  "engineeringRoot": "prototype-preview",
+  "businessBaseline": {
+    "ref": "main",
+    "revision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+    "uiComponentsVersion": "@halo-dev/components@2.27.0 (npm latest；仓库源码为未发布的 2.28.0)"
+  },
+  "referencePage": {
+    "sourcePath": "ui/console-src/modules/contents/posts/PostList.vue",
+    "targetPath": "src/views/PostListView.vue"
+  },
+  "commands": {
+    "install": [
+      "npm",
+      "install"
+    ],
+    "dev": [
+      "npm",
+      "run",
+      "dev"
+    ],
+    "build": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "preview": [
+      "npm",
+      "run",
+      "preview"
+    ]
+  },
+  "sources": [
+    {
+      "sourcePath": "ui/console-src/layouts/BasicLayout.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/layouts/BasicLayout.vue",
+      "usage": "rewritten-visual-shell",
+      "adaptation": "保留 16rem 固定侧栏、白色表面与主内容区的骨架和尺寸；菜单改为本地静态分组，去掉路由守卫、全局搜索、插件菜单和用户信息接口"
+    },
+    {
+      "sourcePath": "ui/src/components/menu/RoutesMenu.tsx",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/layouts/BasicLayout.vue",
+      "usage": "adapted",
+      "adaptation": "沿用 VMenu/VMenuItem 的 active + openIds 用法；菜单数据改为本地常量"
+    },
+    {
+      "sourcePath": "ui/tailwind.config.ts",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "tailwind.config.ts + src/styles.css",
+      "usage": "adapted",
+      "adaptation": "主题色 primary #4CCBA0 / secondary #0E1731 / danger #D71D1D、borderRadius.base=4px 由 @halo-dev/components/dist/style.css 提供；工程内仅补 tailwind 插件与内容扫描"
+    },
+    {
+      "sourcePath": "ui/packages/components/src/components/filter/FilterDropdown.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/halo/filter/FilterDropdown.vue",
+      "usage": "copied-and-adapted",
+      "adaptation": "npm 上 2.27.0 未发布 VFilterDropdown；相对导入改为 @halo-dev/components 与本地类型；IconCheck 使用内联 SVG 替代 ~icons/ri/check-line"
+    },
+    {
+      "sourcePath": "ui/packages/components/src/components/filter/FilterDropdownGroup.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/halo/filter/FilterDropdownGroup.vue",
+      "usage": "copied-and-adapted",
+      "adaptation": "仅调整相对导入路径"
+    },
+    {
+      "sourcePath": "ui/packages/components/src/components/filter/types.ts",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/halo/filter/types.ts",
+      "usage": "copied",
+      "adaptation": "none"
+    },
+    {
+      "sourcePath": "ui/packages/components/src/components/filter/group.ts",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/halo/filter/group.ts",
+      "usage": "copied",
+      "adaptation": "none"
+    },
+    {
+      "sourcePath": "ui/console-src/modules/contents/posts/PostList.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/views/PostListView.vue",
+      "usage": "rewritten-visual-page",
+      "adaptation": "复用 VPageHeader/VCard/VEntity 列表/筛选/分页/状态点/弹层组合与筛选交互；数据源换成 @/mock，去掉权限、批量操作、设置弹窗表单与编辑器路由"
+    },
+    {
+      "sourcePath": "ui/public (favicon/logo) + ui/src/assets/logo.svg",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "public/logo.svg",
+      "usage": "copied",
+      "adaptation": "none"
+    },
+    {
+      "sourcePath": "ui/src/components/input/SearchInput.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/SearchInput.vue",
+      "usage": "rewritten-visual",
+      "adaptation": "保留搜索输入框的交互位置；真实实现基于 FormKit + @halo-dev/ui-shared，预览改为原生 input（FormKit 与 ui-shared 未纳入）"
+    }
+  ],
+  "previewOnly": [
+    "src/mock/data.ts",
+    "src/mock/index.ts",
+    "src/views/ComponentDemoView.vue"
+  ]
+}
