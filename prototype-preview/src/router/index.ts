@@ -6,7 +6,19 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      redirect: "/posts",
+      redirect: "/operations",
+    },
+    {
+      path: "/operations",
+      name: "OperationsOverview",
+      component: () => import("@/views/operations/OperationsOverviewView.vue"),
+      meta: { title: "站点运营概览" },
+    },
+    {
+      path: "/comments",
+      name: "CommentsPlaceholder",
+      component: () => import("@/views/FakeCommentsView.vue"),
+      meta: { title: "评论管理" },
     },
     {
       path: "/posts",

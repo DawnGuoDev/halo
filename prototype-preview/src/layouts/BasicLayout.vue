@@ -2,6 +2,7 @@
 import {
   IconBookRead,
   IconDashboard,
+  IconRocketLine,
   IconPages,
   IconSettings,
   IconUserLine,
@@ -24,7 +25,10 @@ const groups: MenuGroup[] = [
   {
     id: "dashboard",
     label: "",
-    items: [{ path: "/demo", title: "组件示例", icon: IconDashboard }],
+    items: [
+      { path: "/operations", title: "运营概览", icon: IconRocketLine },
+      { path: "/demo", title: "组件示例", icon: IconDashboard },
+    ],
   },
   {
     id: "content",
