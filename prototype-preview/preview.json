@@ -1,0 +1,281 @@
+{
+  "root": ".",
+  "inputs": [
+    "src",
+    "package.json",
+    "package-lock.json",
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.cjs",
+    "index.html"
+  ],
+  "checks": [
+    [
+      "npm",
+      "run",
+      "build"
+    ]
+  ],
+  "build": [
+    "npm",
+    "run",
+    "build:preview"
+  ],
+  "entry": "dist/index.html",
+  "timeoutSeconds": 240,
+  "browser": {
+    "ready": ".page-header",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "scenarios": [
+      {
+        "name": "无筛选时隐藏标签区",
+        "suffix": "#/posts",
+        "steps": [
+          {
+            "action": "visible",
+            "selector": "[data-testid=post-search-input]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=active-filters]"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=post-list]"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=post-list] tbody tr",
+            "value": 20
+          }
+        ]
+      },
+      {
+        "name": "筛选显示标签并单独移除",
+        "suffix": "#/posts?status=content.halo.run%2Fpublished%3Dfalse&visible=PRIVATE",
+        "steps": [
+          {
+            "action": "text",
+            "selector": "[data-testid=active-filters]",
+            "text": "状态：未发布"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=active-filters]",
+            "text": "可见性：私有"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid^=filter-tag-]:not([data-testid*=remove])",
+            "value": 2
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=filter-tag-remove-visible]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=filter-tag-visible]"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=filter-tag-status]",
+            "text": "状态：未发布"
+          },
+          {
+            "action": "text",
+            "selector": "button[aria-haspopup=listbox]:has-text(\"可见性\")",
+            "text": "可见性：全部"
+          }
+        ]
+      },
+      {
+        "name": "回车搜索生成关键词标签并清除",
+        "suffix": "#/posts",
+        "steps": [
+          {
+            "action": "fill",
+            "selector": "[data-testid=post-search-input]",
+            "value": "Halo"
+          },
+          {
+            "action": "press",
+            "selector": "[data-testid=post-search-input]",
+            "key": "Enter"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=filter-tag-keyword]",
+            "text": "关键词：Halo"
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=filter-tag-remove-keyword]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=filter-tag-keyword]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=post-search-clear]"
+          }
+        ]
+      },
+      {
+        "name": "清除全部恢复默认",
+        "suffix": "#/posts?status=content.halo.run%2Fpublished%3Dfalse&visible=PRIVATE",
+        "steps": [
+          {
+            "action": "click",
+            "selector": "[data-testid=clear-all-filters]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=active-filters]"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=post-list]"
+          }
+        ]
+      },
+      {
+        "name": "筛选变化回到第一页",
+        "suffix": "#/posts?page=2",
+        "steps": [
+          {
+            "action": "text",
+            "selector": "[data-testid=post-pagination]",
+            "text": "2 / 2"
+          },
+          {
+            "action": "click",
+            "selector": "button[aria-haspopup=listbox]:has-text(\"状态\")"
+          },
+          {
+            "action": "click",
+            "selector": "[role=option]:has-text(\"未发布\")"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=filter-tag-status]",
+            "text": "状态：未发布"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=post-pagination]",
+            "text": "1 / 1"
+          },
+          {
+            "action": "text",
+            "selector": "[data-testid=active-filters]",
+            "text": "清除全部"
+          }
+        ]
+      },
+      {
+        "name": "筛选无结果清除筛选",
+        "suffix": "#/posts?category=tag-%E4%B8%8D%E5%AD%98%E5%9C%A8&tag=tag-%E4%B8%8D%E5%AD%98%E5%9C%A8",
+        "steps": [
+          {
+            "action": "text",
+            "selector": ".empty-title",
+            "text": "没有符合筛选条件的文章"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=empty-clear-filters]",
+            "value": 1
+          },
+          {
+            "action": "click",
+            "selector": "[data-testid=empty-clear-filters]"
+          },
+          {
+            "action": "hidden",
+            "selector": "[data-testid=active-filters]"
+          },
+          {
+            "action": "visible",
+            "selector": "[data-testid=post-list]"
+          }
+        ]
+      },
+      {
+        "name": "站点无文章保留原空态",
+        "suffix": "?scenario=empty#/posts",
+        "steps": [
+          {
+            "action": "text",
+            "selector": ".empty-title",
+            "text": "当前没有文章"
+          },
+          {
+            "action": "count",
+            "selector": "[data-testid=empty-clear-filters]",
+            "value": 0
+          },
+          {
+            "action": "text",
+            "selector": ".empty-actions",
+            "text": "新建"
+          }
+        ]
+      }
+    ]
+  },
+  "delivery": [
+    "src",
+    "package.json",
+    "package-lock.json",
+    "vite.config.ts",
+    "tailwind.config.ts",
+    "postcss.config.cjs",
+    "tsconfig.json",
+    "tsconfig.app.json",
+    "env.d.ts",
+    "index.html",
+    "public",
+    "preview.json",
+    "scripts",
+    "dist",
+    "README.md",
+    "integration-guide.md",
+    "prototype-map.json",
+    "design-notes.md",
+    "screenshot-filters-active.png",
+    "screenshot-keyword-active.png",
+    "screenshot-filtered-empty.png"
+  ],
+  "serveRoot": "dist",
+  "deliveryRoles": {
+    "source": [
+      "src"
+    ],
+    "build": [
+      "package.json",
+      "package-lock.json",
+      "vite.config.ts",
+      "tailwind.config.ts",
+      "postcss.config.cjs",
+      "tsconfig.json",
+      "tsconfig.app.json",
+      "env.d.ts",
+      "index.html",
+      "public"
+    ],
+    "guide": [
+      "README.md",
+      "integration-guide.md",
+      "prototype-map.json",
+      "design-notes.md",
+      "screenshot-filters-active.png",
+      "screenshot-keyword-active.png",
+      "screenshot-filtered-empty.png"
+    ]
+  }
+}

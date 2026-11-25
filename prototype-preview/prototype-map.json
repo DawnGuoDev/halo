@@ -31,6 +31,29 @@
       "npm",
       "run",
       "preview"
+    ],
+    "validate": [
+      "python3",
+      "<independent-prototype-assistant>/scripts/preview.py",
+      "validate",
+      "<abs>/prototype-preview/preview.json"
+    ],
+    "browser": [
+      "node",
+      "<independent-prototype-assistant>/scripts/browser.mjs",
+      "<abs>/prototype-preview/preview.json",
+      "--playwright-module",
+      "<abs>/prototype-preview/node_modules/playwright-core/index.mjs",
+      "--executable",
+      "/usr/bin/chromium-browser"
+    ],
+    "package": [
+      "python3",
+      "<independent-prototype-assistant>/scripts/preview.py",
+      "package",
+      "<abs>/prototype-preview/preview.json",
+      "--out",
+      "<abs>/fresh-package"
     ]
   },
   "sources": [
@@ -103,11 +126,92 @@
       "targetPath": "src/components/SearchInput.vue",
       "usage": "rewritten-visual",
       "adaptation": "保留搜索输入框的交互位置；真实实现基于 FormKit + @halo-dev/ui-shared，预览改为原生 input（FormKit 与 ui-shared 未纳入）"
+    },
+    {
+      "sourcePath": "ui/src/components/filter/CategoryFilterDropdown.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/filter/CategoryFilterDropdown.vue",
+      "usage": "copied-and-adapted",
+      "adaptation": "数据入口由 @console usePostCategory + vue-query 换成 @/composables/use-resource-queries（本地 Promise）；类型改从迁入的 @/components/halo/filter 导入；选项 value=分类 name、label=displayName 保持不变"
+    },
+    {
+      "sourcePath": "ui/src/components/filter/TagFilterDropdown.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/filter/TagFilterDropdown.vue",
+      "usage": "copied-and-adapted",
+      "adaptation": "同上；保留标签颜色圆点与文章计数"
+    },
+    {
+      "sourcePath": "ui/src/components/filter/UserFilterDropdown.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/filter/UserFilterDropdown.vue",
+      "usage": "copied-and-adapted",
+      "adaptation": "保留远程搜索、已选作者补充与头像；查询换成 useUserQueries；VFilterDropdown 从迁入模块导入；$t 换成 @/i18n"
+    },
+    {
+      "sourcePath": "ui/src/components/input/SearchInput.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/components/SearchInput.vue",
+      "usage": "rewritten-visual",
+      "adaptation": "FormKit 未纳入，改为原生 input；保留“输入不即时生效、Enter 提交、清除按钮提交空值”的交互语义，并补 data-testid"
+    },
+    {
+      "sourcePath": "ui/console-src/modules/contents/posts/PostList.vue",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/views/PostListView.vue",
+      "usage": "rewritten-visual-page",
+      "adaptation": "本次需求增量：新增「当前筛选」标签行与筛选无结果空态；筛选控件、URL query 同步、筛选变化回第 1 页、重置图标、列表与分页保留。数据源换成 @/mock；批量操作/权限/插件扩展点未迁入"
+    },
+    {
+      "sourcePath": "ui/src/locales/zh-CN.json, ui/src/locales/en.json",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/locales/zh-CN.json, src/locales/en.json",
+      "usage": "copied-and-extended",
+      "adaptation": "抽取本页所用按键并新增 core.post.filters.active.* 与 core.post.empty_filtered.*（本次原型阶段补充的中英文案，回填时进入业务文案）"
+    },
+    {
+      "sourcePath": "ui/packages/components/src/components/empty/Empty.svg",
+      "sourceRevision": "f6c046cc27e2b5d61367b85792b6cd51bd9101f1",
+      "targetPath": "src/assets/empty.svg（当前未引用，npm 包已内联同一图形）",
+      "usage": "reference",
+      "adaptation": "仅作来源核对，运行时使用 @halo-dev/components 内联资源"
     }
   ],
   "previewOnly": [
     "src/mock/data.ts",
     "src/mock/index.ts",
-    "src/views/ComponentDemoView.vue"
-  ]
+    "src/composables/use-resource-queries.ts",
+    "src/i18n.ts",
+    "src/locales/*.json（补齐后随回填进入业务文案）",
+    "src/views/ComponentDemoView.vue",
+    "preview.json",
+    "scripts/verify.mjs",
+    "design-notes.md"
+  ],
+  "thisTask": {
+    "name": "Halo 控制台文章列表筛选体验优化",
+    "requirement": "artifacts/设计设计/PRD 文档（PRD 文档 v1）",
+    "changed": [
+      "src/views/PostListView.vue",
+      "src/components/SearchInput.vue",
+      "src/components/filter/{Category,Tag,User}FilterDropdown.vue",
+      "src/composables/use-post-filters.ts",
+      "src/composables/use-resource-queries.ts",
+      "src/styles.css",
+      "src/mock/{index,data}.ts",
+      "src/types.ts",
+      "src/i18n.ts",
+      "src/locales/*.json",
+      "preview.json",
+      "README.md",
+      "integration-guide.md",
+      "design-notes.md"
+    ],
+    "preserved": [
+      "页面头部与右上操作",
+      "搜索框/筛选组/刷新图标布局",
+      "「重置」图标与筛选组清除行为",
+      "列表行、行内操作、分页、设置弹层入口"
+    ]
+  }
 }

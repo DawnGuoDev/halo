@@ -1,4 +1,6 @@
 node_modules/
 dist/
+.prototype-evidence/
+.agentnative-shots/
 *.local
 .DS_Store

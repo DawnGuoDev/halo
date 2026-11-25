@@ -42,3 +42,25 @@
     @apply px-3 pb-1 pt-4 text-xs font-medium text-gray-500;
   }
 }
+
+/* 当前筛选标签：沿用 VTag 的浅色底 + 边框观感，但需要容纳关闭按钮并保持单行（局部样式，随回填移除） */
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  max-width: 22rem;
+  height: 1.5rem;
+  padding: 0 0.25rem 0 0.5rem;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background-color: #f9fafa;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.filter-chip__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

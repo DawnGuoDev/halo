@@ -34,18 +34,29 @@ npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 - 样式入口：`src/styles.css`（Tailwind 三层 + 控制台骨架类），组件样式来自 `@halo-dev/components/dist/style.css`
 - 本地 Mock：`src/mock/index.ts`（唯一数据入口）+ `src/mock/data.ts`（固定数据）
 
+## 本次需求 · 文章列表筛选标签
+
+当前工程承载「Halo 控制台文章列表筛选体验优化」原型：在筛选区下方显示「当前筛选」可关闭标签、
+「清除全部」，筛选无结果时提供「清除筛选」空态。业务规则见 PRD；实现与回填步骤见
+[integration-guide.md](./integration-guide.md)，验收记录与截图见 [design-notes.md](./design-notes.md)。
+
+验收数据入口：`preview.json`（独立原型辅助 Skill 的 preview.py / browser.mjs 配置），
+`.prototype-evidence/preview/` 保存构建日志与浏览器报告。
+
 ## 已支持能力
 
 - Vue 3 + TypeScript + Vite + TailwindCSS 3 独立工具链，`npm run build` 含 `vue-tsc` 类型检查
 - 真实 `@halo-dev/components@2.27.0` 主题与组件：按钮、卡片、页头、实体列表、分页、筛选、状态点、标签、弹层（Modal）、Alert、Tabs、描述列表、开关、Toast、下拉菜单
 - 控制台骨架：固定 16rem 侧栏、菜单分组、主内容区与页脚
 - 从业务源码迁入的 `VFilterDropdown` / `VFilterDropdownGroup`（见下方「版本差异」）
-- 本地 Mock 数据层：搜索、状态/可见性/分类筛选、排序、分页、发布、删除均可交互
+- 本地 Mock 数据层：搜索、状态/可见性/分类/标签/作者筛选、排序、分页、发布、删除均可交互
+- 文章列表筛选标签：可关闭标签、清除全部、筛选无结果空态、筛选变化回到第 1 页、URL query 同步
+- 迁入真实筛选控件：分类 / 标签 / 作者下拉（源码见 `src/components/filter/`），搜索框按 Enter 提交
 
 ## 尚未纳入的能力
 
 - 登录、权限（`v-permission`、`useUserPermissions`）、全局搜索、UI 插件运行时
-- 后端接口（`@halo-dev/api-client`）、`@tanstack/vue-query` 数据层与 URL 同步筛选
+- 后端接口（`@halo-dev/api-client`）与 `@tanstack/vue-query` 数据层（本地以 Promise 适配替代）
 - 文章编辑器（富文本）、分类/标签/回收站管理页、批量操作
 - 移动端菜单、国际化（vue-i18n）、FormKit 表单与校验
 - 用户中心（`uc-src`）与主题渲染
