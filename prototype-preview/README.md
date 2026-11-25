@@ -13,10 +13,12 @@
 ```bash
 cd prototype-preview
 npm install
-npm run dev       # http://localhost:5173
+npm run dev       # http://localhost:5173/#/posts
 npm run build     # vue-tsc 类型检查 + 生产构建到 dist/
-npm run preview   # 预览构建产物 http://localhost:4173
+npm run preview   # 预览构建产物 http://localhost:4173/#/posts
 ```
+
+路由使用 hash 模式、构建使用相对 `base`，`dist/` 可直接作为静态目录托管（含制品平台预览），不依赖服务器 rewrite。
 
 只使用 npm 与独立 `package-lock.json`，不依赖仓库根工程的 Gradle / pnpm / vite-plus 安装链，也不需要后端、数据库或容器。
 
@@ -24,8 +26,8 @@ npm run preview   # 预览构建产物 http://localhost:4173
 
 | 路由 | 文件 | 说明 |
 | --- | --- | --- |
-| `/posts`（默认） | `src/views/PostListView.vue` | 参考真实「文章」列表页：页头 + 筛选 + 实体列表 + 分页 + 设置弹层 |
-| `/demo` | `src/views/ComponentDemoView.vue` | 常用组件示例：按钮、标签、Alert、Tabs、描述列表、开关、Toast |
+| `/#/posts`（默认） | `src/views/PostListView.vue` | 参考真实「文章」列表页：页头 + 筛选 + 实体列表 + 分页 + 设置弹层 |
+| `/#/demo` | `src/views/ComponentDemoView.vue` | 常用组件示例：按钮、标签、Alert、Tabs、描述列表、开关、Toast |
 
 - 布局与侧栏：`src/layouts/BasicLayout.vue`
 - 路由表：`src/router/index.ts`（新增页面时在此追加懒加载路由，并在布局菜单中加一项）
