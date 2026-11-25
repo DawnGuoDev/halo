@@ -12,10 +12,10 @@
 | 登记所在基准分支 | `main` |
 | 原型分支 | `prototype-preview` |
 | 工程目录 | `prototype-preview/`，相对原型分支根目录 |
-| 已有验收记录对应提交 | `1a64e4f65b97a1c49559e0a02636ae5477b045c3` |
+| 已有验收记录对应提交 | `350b845c1825ee9963f61ff1761db82a33f69371`（文章信息速览；前一提交 `1a64e4f65` 为筛选标签） |
 | 初始基座提交 | `f05f3721afa84a8b598c013a2d8e1317896b4666` |
 | 业务来源基线 | `main@f6c046cc27e2b5d61367b85792b6cd51bd9101f1` |
-| 登记日期 | 2026-11-25 |
+| 登记日期 | 2026-11-25（2026-11-25 更新：文章信息速览） |
 
 原型分支后续可能继续更新，最新 HEAD 不自动代表已经验证。
 复用时核对远端、上述提交和本次涉及的业务源码变化；不要把原型源码指针当作最新业务基线。
@@ -28,7 +28,7 @@
 git ls-remote --heads origin prototype-preview
 git fetch origin prototype-preview
 # 目录已存在时先检查并复用，不覆盖；可按实际情况另选目录。
-git worktree add --detach ../halo-prototype-preview 1a64e4f65b97a1c49559e0a02636ae5477b045c3
+git worktree add --detach ../halo-prototype-preview 350b845c1825ee9963f61ff1761db82a33f69371
 cd ../halo-prototype-preview/prototype-preview
 npm ci
 npm run build
@@ -55,13 +55,17 @@ npm run preview
 - `preview.json`：正式验收配置；工具调用参照工程说明和当前辅助 Skill。
 - `src/mock/`：前端本地数据入口；`src/router/index.ts`：原型路由。
 
-该提交的 `design-notes.md` 记录：构建通过，1440×900 下 7 个文章列表筛选场景通过，
-并完成可见性、分类和作者下拉的代表性浮层抽查，无运行错误或失败请求。
+该提交的 `design-notes.md` 记录：构建通过；1440×900 下 13 个场景通过（文章列表筛选 7 个 +
+文章信息速览 6 个），并完成可见性、分类和作者下拉的代表性浮层抽查，无运行错误或失败请求。
+本轮（文章信息速览）新增：`src/components/post/PostQuickViewDrawer.vue`（右侧抽屉，复用 VModal 能力）、
+行内「速览」入口、编辑器占位路由 `/#/posts/edit`；原型验证入口 `/#/posts`。
 此登记依据已提交的验收记录及本次监控结果；登记时未在本地重跑构建或浏览器验收。
 原始 `.prototype-evidence/` 回执未随该提交收录；需要复查时按配置重新执行受影响检查。
 平台制品此前报告回读通过，在线入口未实测，不据此宣称平台在线验证通过。
 
 已知限制：采用独立外壳和本地 Mock；搜索框等存在适配，不能视作完整业务源码直搬。
+速览抽屉的右侧定位为局部 CSS（业务建议由组件新增 placement 替代）；编辑器为占位页；
+`INTERNAL` 可见性、状态「草稿」措辞与分类/标签超长换行尚未在业务侧确认。
 权限、批量操作、设置表单及英文视觉未纳入本次业务验收；国际化、组件版本与回填差异
 应继续参考工程内说明，新增需求仍须读取目标业务页面源码。
 
