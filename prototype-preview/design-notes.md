@@ -2,7 +2,7 @@
 
 ## 基线
 - 业务来源：`DawnGuoDev/halo` @ `02a4adf3b6404dbb5e1431b0106ae85d68e8b1a3`（工作分支 `feat/08ab0c6c-8jfv`）；页面参考 `ui/console-src/modules/dashboard/*`、`ui/console-src/modules/contents/comments/*`、`ui/console-src/modules/contents/posts/PostList.vue`。
-- 原型来源：`prototype-preview@1a64e4f65b97a1c49559e0a02636ae5477b045c3`（登记基线 `main@f6c046cc2`）；本次在任务分支 `feat/proto-site-ops-overview` 的 `prototype-preview/` 工程内增量实现。
+- 原型来源：`prototype-preview@1a64e4f65b97a1c49559e0a02636ae5477b045c3`（登记基线 `main@f6c046cc2`）；本次在任务分支 `feat/proto-site-ops-overview`（远端 `origin/feat/proto-site-ops-overview`）的 `prototype-preview/` 工程内增量实现；本验收记录对应的源码提交记录在分支提交信息与工程 `prototype-map.json`。
 - 工程：Vue 3.5 + TypeScript + Vite 7 + Tailwind 3.4 + `@halo-dev/components@2.27.0`（**未升级依赖、未新增依赖、锁文件未变**）。
 - 设计系统：Halo v2.28.0（`knowledge/design-system/halo`，OD catalog `user:halo` 已按导出 zip restore 且内容一致）：主色 #4CCBA0、深色辅助 #0E1731、4px 圆角、12px 辅助文本、图金/状态色需与文字或图标共同表达。
 
