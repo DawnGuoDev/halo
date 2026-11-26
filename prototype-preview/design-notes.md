@@ -1,47 +1,47 @@
-# 设计说明与验收记录 · 文章列表筛选标签 + 文章信息速览
+# 设计说明与验收记录 · 文章信息速览（v3）
 
-## 本轮（v2）· 文章信息速览
+## 本轮（v3）· 文章信息速览修正与复验
 
 ### 基线
-- 需求：`artifacts/产品设计/PRD 文档`（v2，REQ-001 / REQ-002，三项口径已确认）。
-- 业务来源：`DawnGuoDev/halo` @ `f6c046cc27e2b5d61367b85792b6cd51bd9101f1`；页面 `ui/console-src/modules/contents/posts/PostList.vue`、行组件 `components/PostListItem.vue`、字段 `entity-fields/{PublishStatus,PublishTime,Visible}Field.vue`；弹层 `ui/packages/components/src/components/modal/Modal.vue`。
-- 原型工程：`prototype-preview` 分支上的任务分支 `feat/post-quick-view`，从已验收提交 `1a64e4f65` 增量实现；Vue 3 + TS + Vite + Tailwind + `@halo-dev/components@2.27.0`。
-- 设计系统：Halo v2.28.0 —— 4px 圆角、主色 #4CCBA0、12px 辅助文本、抽屉/弹层进入 200ms / 退出 100ms。
+- 需求：`artifacts/产品设计/PRD 文档/PRD.md`（v2，REQ-001 / REQ-002）。本轮无新增业务口径，按 PRD 修正原型偏差。
+- 业务来源：`DawnGuoDev/halo` @ `f6c046cc27e2b5d61367b85792b6cd51bd9101f1`：`PostList.vue`、`PostListItem.vue`、`entity-fields/{PublishStatus,PublishTime,Visible}Field.vue`、`ui/src/locales/*.json`、`Modal.vue`。
+- 原型工程：`prototype-preview` 分支的任务分支 `feat/45e18184-ax04-prototype`，从已验证提交 `350b845c1` 增量实现；Vue 3 + TS + Vite + Tailwind + `@halo-dev/components@2.27.0`。
 
-### 保留 / 变化
-- 保留：页头与右上操作、搜索 + 筛选组 + 刷新、当前筛选标签行、筛选无结果空态、列表行字段与操作菜单、分页、设置弹层入口。
-- 变化：行尾（操作菜单左侧）新增「速览」；右侧 420px 全高抽屉；底部「编辑文章」；空值占位；Esc/关闭按钮关闭、遮罩不关闭；编辑占位页往返。
-
-### 视觉选择
-- 入口：12px 灰字（#4b5563），位于最近更新时间之后、⋯之前；默认透明文字保留布局，悬停该行/键盘聚焦/抽屉正打开该行时显色并 hover 下划线，右上与操作菜单同层级视觉权重。
-- 抽屉：白底、左 1px 边框、无圆角、全高；头部沿用 `VModal` 默认标题「文章速览」+ 关闭按钮；标题 18px/600；字段为“标签 12px 灰 / 值 14px”纵向列表，间距 20px；分类与标签使用 `VTag`；空值为 gray-400 文案；底部右侧 `secondary` 型「编辑文章」按钮（唯一主操作），与设计系统“一个操作区最多一个 primary、次要动作用 secondary”一致。
-- 状态：已发布绿点、草稿灰点、定时发布黄点、发布中黄色动画点（`VStatusDot`，与列表口径一致）。
+### 本轮修正（相对 350b845c1）
+1. **P0 残留 / 二次打开失效**：抽屉改为由列表以 `v-if="quickViewOpen && quickViewPost"` 渲染，关闭即卸载；去掉抽屉内重复 `onMounted` 和 `v-if="visible || post"` 造成的隐藏常驻实例。连续打开 A、B 时每次都得到新实例，不可能残留隐藏的下拉菜单或上一篇字段。
+2. **P0 遮罩关闭**：去掉 `:layer-closable="true"`，保持组件默认 false，点击遮罩不关闭。
+3. **P1 内部可见性**：INTERNAL 显示「内部 / Internal」（PRD「本次改动」要求），列表筛选仍两值。
+4. **P1 草稿文案**：`status.draft` 改为「未发布」，与列表状态、PRD 状态口径一致。
+5. **P1 入口可发现性**：入口从“默认透明、悬停才显色”改为始终可见的 12px 灰字按钮，仍在 ⋯ 左侧，hover/focus 加深。
+6. 抽屉正文去掉中途的悬挂说明；字段标签 12px 灰、值 14px，空值 gray-400；底部「编辑文章」为唯一主操作（default 按钮 + 图标）。
 
 ### 浏览器检查（HTTP 独立页面，构建产物 dist）
-- 工具：独立原型辅助 Skill `preview.py` + `browser.mjs`（Playwright，`/usr/bin/chromium-browser`），配置 `preview.json`；`playwright-core` 装在会话隔离目录（`/tmp/halo-tools/prototype-browser`，未写入工程依赖）。
-- 视口：1440×900。构建：`npm run build`（vue-tsc + vite）与 preview.py build 均通过。
-- 13 个场景全部通过（v1 筛选 7 个 + v2 速览 6 个）：
-  1. 速览抽屉展示文章信息（标题/已发布/公开/2 个分类/2 个标签/发布时间/最近更新时间，编辑按钮可见）；
-  2. 空分类标签与未发布占位（草稿、“未设置分类”、“未发布”，标签仍有值）；
-  3. 无标签也显示占位（分类和标签都显示“未设置”，状态已发布）；
-  4. 定时发布文章显示「定时发布」与计划时间；
-  5. 连续查看与 Esc：可见性=私有时打开第 2 页文章 → Esc → 打开另一篇 → Esc，筛选标签保持、抽屉只显示最后点击文章的分类与时间；
-  6. 编辑文章后返回：第 2 页（30 条/页）打开抽屉 → 编辑占位页 → 返回，页码 2/2 与总条数保持、抽屉关闭。
-- 人工补充（截图）：入口悬停显示；定时发布状态；遮罩点击不关闭（`layer-closable=false`，浏览器工具实测点击遮罩后抽屉仍在）；关闭后焦点回到触发按钮；点击 Open 后行保持选中背景。
-- 运行错误：浏览器报告 `errors: []`，资源均为构建产物 200。
+- 工具：独立原型辅助 Skill `preview.py` + `browser.mjs`（Playwright `1.56.1` + `/usr/bin/chromium-browser`），配置 `preview.json`；模块装在会话隔离目录 `/tmp/halo-tools/prototype-browser`。
+- 视口 1440×900。构建：`preview.py build`（`npm run build:preview`）通过；`npm run build`（vue-tsc + vite）通过。
+- **16 个场景全部通过**（v1 筛选 7 个 + 速览 9 个），新增：
+  1. 速览入口始终可见（⋯ 左侧）→ 点击打开后标题与行一致；
+  2. 点击遮罩不关闭 → 关闭按钮关闭 → 仍在第 2/2 页；
+  3. 连续切换 A（默认分类/技术）→ B（未设置分类、发布时间「未发布」）→ C（未设置标签）：每次都只显示当前文章；
+  4. 编辑文章后返回：第 2 页 30/页打开 post-32 的速览 → 编辑占位页显示同名文章 → 返回后仍在 2/2、共 40 项，抽屉关闭。
+- 已经过场景覆盖：已发布/公开、草稿 + 空分类 + 无发布时间、空标签、内部、私有、定时发布（post-12）、Esc 关闭后筛选与行数保持。
+- 人工观察（截图）：入口默认可见；抽屉右侧全高、头部「文章速览」+ 关闭按钮、字段纵向排列；底部固定「编辑文章」。
+- 运行错误：所有场景 `errors: []`，资源均为构建产物 200。
 
 ### 截图（本包内）
-- `screenshot-quick-view-entry.png`：悬停行显示「速览」入口（⋯ 左侧）。
-- `screenshot-quick-view-drawer.png`：已发布文章抽屉（分类/标签/发布时间/最近更新时间/编辑文章）。
-- `screenshot-quick-view-empty.png`：未发布、未设置分类、发布日期显示「未发布」。
+- `screenshot-quick-view-entry.png`：列表行内常显「速览」入口（⋯ 左侧）。
+- `screenshot-quick-view-drawer.png`：已发布 · 公开文章抽屉（分类/标签/发布时间/最近更新时间/编辑文章）。
+- `screenshot-quick-view-empty.png`：内部可见性的未发布文章（未设置分类、未发布）。
+- `screenshot-quick-view-switch-no-residue.png`：先看两分类文章再直接看空分类+空标签文章，仅显示后者。
+- `screenshot-quick-view-list-with-filters.png`：第 2 页列表（30/页），关闭后仍停留原页。
+- `screenshot-quick-view-page2-drawer.png`：第 2 页打开私有文章速览（遮罩点击不关闭，关闭按钮后页码保持）。
 - `screenshot-editor-placeholder.png`：编辑器占位页（原型边界）。
 
 ### 未覆盖 / 限制
-- 「发布中」状态的自动轮询与真实发布流程未模拟（Mock 用固定 `publicizing` 样本表达）；抽屉不自动刷新。
-- `INTERNAL` 可见性样本按 PRD 两值显示为「公开」，业务实际枚举需研发确认。
-- 分类/标签数量很多时的换行与滚动未专项验收（PRD 标注为未验证边界）；抽屉正文已 `overflow-y:auto`。
-- 窄屏 < 640px 未做专项验收（抽屉固定 420px，`max-width:100vw`）。
-- 编辑器为占位页，真实编辑器、权限与批量操作未纳入本次原型。
+- 真实文章中不存在“发布中”样本进入验收；Mock 的 `publicizing` 状态在场景中未单独断言（状态映射逻辑与列表一致）。
+- 权限：未模拟文章编辑权限，`编辑文章` 始终可见；回填时受 `system:posts:manage` 约束。
+- 分类/标签很多时的换行与正文滚动（PRD D-01）未专项验收；正文 `overflow-y:auto`。
+- 英文界面无切换入口，英文键已补齐未做视觉验收。
+- 编辑器为占位页，真实编辑器、批量操作、设置表单未纳入本次原型。
 
 ## v1 · 文章列表筛选标签（保留）
 

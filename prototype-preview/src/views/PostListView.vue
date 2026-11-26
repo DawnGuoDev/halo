@@ -244,7 +244,9 @@ function openQuickView(post: MockPost) {
 }
 
 function closeQuickView() {
+  const closing = quickViewPost.value;
   quickViewPost.value = undefined;
+  if (!closing) return;
   // 焦点回到触发「速览」的按钮（VModal 也会尝试恢复原焦点，二者指向同一按钮）；
   // 等 Modal 的 200ms 关闭动画结束、焦点陷阱解除后再聚焦，避免被拦截
   window.setTimeout(() => {
@@ -660,9 +662,11 @@ function publishedText(post: MockPost) {
     </template>
   </VModal>
 
-  <!-- 速览抽屉：关闭时保留组件实例（v-show），只清空数据，避免反复挂载/卸载与焦点抖动 -->
+  <!-- 速览抽屉：仅在查看中渲染（v-if），关闭即卸载。
+       每次打开都是新实例、post 由 :post 直接传入（不可变替换），连续切换只呈现最后点击的文章，
+       关闭后也不会在隐藏态残留上一篇的下拉菜单或内容。 -->
   <PostQuickViewDrawer
-    v-if="quickViewOpen"
+    v-if="quickViewOpen && quickViewPost"
     :post="quickViewPost"
     @close="closeQuickView"
     @edit="handleQuickViewEdit"

@@ -154,6 +154,7 @@
   "core.post.quick_view.status.draft": "Draft",
   "core.post.quick_view.status.scheduling": "Scheduled",
   "core.post.quick_view.fields.visible": "Visibility",
+  "core.post.quick_view.visible.internal": "Internal",
   "core.post.quick_view.fields.publish_time": "Publish time",
   "core.post.quick_view.fields.update_time": "Last updated",
   "core.post.quick_view.empty.categories": "No category set",
